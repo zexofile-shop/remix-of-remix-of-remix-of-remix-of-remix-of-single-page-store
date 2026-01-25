@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/remix-of-remix-of-remix-of-remix-of-remix-of-single-page-store/",
+  base: "/",
   server: {
     host: "::",
     port: 8080,
