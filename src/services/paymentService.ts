@@ -1,0 +1,129 @@
+import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import { database } from '@/lib/firebase';
+import { loadRazorpayScript, RAZORPAY_KEY_ID, RazorpayPaymentResponse } from '@/lib/razorpay';
+import { Product } from '@/types';
+
+export interface PurchaseRecord {
+  id?: string;
+  userId: string;
+  userEmail: string;
+  productId: string;
+  productTitle: string;
+  productImage: string;
+  productType: 'course' | 'website';
+  deliveryLink: string;
+  amount: number;
+  razorpayPaymentId: string;
+  purchaseDate: number;
+}
+
+// Initialize Razorpay and open payment modal
+export const initiatePayment = async (
+  product: Product,
+  user: { uid: string; email: string | null; displayName: string | null },
+  onSuccess: (purchase: PurchaseRecord) => void,
+  onFailure: (error: string) => void
+): Promise<void> => {
+  // Load Razorpay script
+  const isLoaded = await loadRazorpayScript();
+  if (!isLoaded) {
+    onFailure('Failed to load payment gateway. Please try again.');
+    return;
+  }
+
+  // Amount in paise (multiply by 100)
+  const amountInPaise = Math.round(product.price * 100);
+
+  const options = {
+    key: RAZORPAY_KEY_ID,
+    amount: amountInPaise,
+    currency: 'INR',
+    name: 'ZexoFile Shop',
+    description: product.title,
+    image: 'https://storage.googleapis.com/gpt-engineer-file-uploads/q8YpDSXYtTe3u4wRdDoz0sahjWH2/uploads/1769343657919-1000064780.png',
+    prefill: {
+      name: user.displayName || '',
+      email: user.email || '',
+    },
+    notes: {
+      productId: product.id,
+      userId: user.uid,
+    },
+    theme: {
+      color: '#6366f1',
+    },
+    handler: async (response: RazorpayPaymentResponse) => {
+      try {
+        // Save purchase to Firebase
+        const purchase = await savePurchase(product, user, response.razorpay_payment_id);
+        onSuccess(purchase);
+      } catch (error) {
+        onFailure('Payment successful but failed to save purchase. Please contact support.');
+      }
+    },
+    modal: {
+      ondismiss: () => {
+        // User closed the payment modal
+      },
+    },
+  };
+
+  const razorpay = new window.Razorpay(options);
+  razorpay.open();
+};
+
+// Save purchase to Firebase
+const savePurchase = async (
+  product: Product,
+  user: { uid: string; email: string | null },
+  razorpayPaymentId: string
+): Promise<PurchaseRecord> => {
+  const purchasesRef = ref(database, 'purchases');
+  const newPurchaseRef = push(purchasesRef);
+  
+  const purchase: PurchaseRecord = {
+    userId: user.uid,
+    userEmail: user.email || '',
+    productId: product.id,
+    productTitle: product.title,
+    productImage: product.image,
+    productType: product.type,
+    deliveryLink: product.deliveryLink || product.razorpayLink || '',
+    amount: product.price,
+    razorpayPaymentId,
+    purchaseDate: Date.now(),
+  };
+
+  await set(newPurchaseRef, purchase);
+  
+  return { ...purchase, id: newPurchaseRef.key! };
+};
+
+// Get user's purchase history
+export const getUserPurchases = async (userId: string): Promise<PurchaseRecord[]> => {
+  const purchasesRef = ref(database, 'purchases');
+  const userPurchasesQuery = query(purchasesRef, orderByChild('userId'), equalTo(userId));
+  
+  const snapshot = await get(userPurchasesQuery);
+  
+  if (!snapshot.exists()) {
+    return [];
+  }
+  
+  const purchases: PurchaseRecord[] = [];
+  snapshot.forEach((child) => {
+    purchases.push({
+      id: child.key!,
+      ...child.val(),
+    });
+  });
+  
+  // Sort by purchase date (newest first)
+  return purchases.sort((a, b) => b.purchaseDate - a.purchaseDate);
+};
+
+// Check if user has already purchased a product
+export const hasUserPurchasedProduct = async (userId: string, productId: string): Promise<boolean> => {
+  const purchases = await getUserPurchases(userId);
+  return purchases.some(p => p.productId === productId);
+};

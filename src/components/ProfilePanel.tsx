@@ -472,7 +472,8 @@ const ProfilePanel = ({ isOpen, onClose }: ProfilePanelProps) => {
       originalPrice: originalPrice ? parseFloat(originalPrice) : null,
       image,
       previewLink,
-      razorpayLink,
+      razorpayLink, // This is now used as deliveryLink
+      deliveryLink: razorpayLink, // Store as deliveryLink as well
       content,
       screenshots: screenshots.length > 0 ? screenshots : null,
       youtubeUrl: youtubeUrl || null,
@@ -917,10 +918,11 @@ const ProfilePanel = ({ isOpen, onClose }: ProfilePanelProps) => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Razorpay Payment Link</Label>
+                        <Label>Product Delivery Link (Payment ke baad user ko milega)</Label>
                         <Input
                           value={razorpayLink}
                           onChange={(e) => setRazorpayLink(e.target.value)}
+                          placeholder="https://drive.google.com/... or download link"
                         />
                       </div>
                       <div className="col-span-2 space-y-2">
@@ -1249,19 +1251,44 @@ const ProfilePanel = ({ isOpen, onClose }: ProfilePanelProps) => {
             </Tabs>
           ) : (
             <div>
-              <h3 className="font-semibold mb-4">My Purchases</h3>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                My Purchases
+              </h3>
               {purchases.length > 0 ? (
-                <div className="space-y-2">
-                  {purchases.map((purchase) => (
+                <div className="space-y-3">
+                  {purchases.map((purchase: any) => (
                     <div
                       key={purchase.id}
-                      className="p-4 bg-secondary/30 rounded-lg"
+                      className="p-4 bg-secondary/30 rounded-lg flex items-center gap-4"
                     >
-                      <p className="font-medium">Product #{purchase.productId}</p>
-                      <p className="text-sm text-muted-foreground">
-                        ₹{purchase.amount} •{' '}
-                        {new Date(purchase.purchaseDate).toLocaleDateString()}
-                      </p>
+                      {purchase.productImage && (
+                        <img 
+                          src={purchase.productImage} 
+                          alt={purchase.productTitle || 'Product'} 
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{purchase.productTitle || `Product #${purchase.productId}`}</p>
+                        <p className="text-sm text-muted-foreground">
+                          ₹{purchase.amount} • {new Date(purchase.purchaseDate).toLocaleDateString()}
+                        </p>
+                        {purchase.razorpayPaymentId && (
+                          <p className="text-xs text-muted-foreground">
+                            Payment ID: {purchase.razorpayPaymentId}
+                          </p>
+                        )}
+                      </div>
+                      {purchase.deliveryLink && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => window.open(purchase.deliveryLink, '_blank')}
+                          className="flex-shrink-0"
+                        >
+                          Access
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -2,20 +2,24 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
+import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
+import { initiatePayment, hasUserPurchasedProduct, PurchaseRecord } from '@/services/paymentService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +28,10 @@ const ProductDetail = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentScreenshotIndex, setCurrentScreenshotIndex] = useState(0);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastPurchase, setLastPurchase] = useState<PurchaseRecord | null>(null);
+  const [alreadyPurchased, setAlreadyPurchased] = useState(false);
   
   const inWishlist = id ? isInWishlist(id) : false;
   
@@ -37,6 +45,17 @@ const ProductDetail = () => {
       }
     }
   };
+
+  // Check if user has already purchased this product
+  useEffect(() => {
+    const checkPurchase = async () => {
+      if (user && id) {
+        const purchased = await hasUserPurchasedProduct(user.uid, id);
+        setAlreadyPurchased(purchased);
+      }
+    };
+    checkPurchase();
+  }, [user, id]);
 
   useEffect(() => {
     if (!id) return;
@@ -77,20 +96,60 @@ const ProductDetail = () => {
   }, [id]);
 
   const handleAddToCart = () => {
+    if (!user) {
+      toast.error('Please login to add items to cart');
+      setIsAuthOpen(true);
+      return;
+    }
+    
     if (product) {
       setCart((prev) => [...prev, product]);
       toast.success(`${product.title} added to cart!`);
     }
   };
 
-  const handleBuyNow = () => {
-    if (product) {
-      if (product.razorpayLink) {
-        window.open(product.razorpayLink, '_blank');
-      } else {
-        handleAddToCart();
-        setIsCartOpen(true);
-      }
+  const handleBuyNow = async () => {
+    if (!user) {
+      toast.error('Please login to make a purchase');
+      setIsAuthOpen(true);
+      return;
+    }
+
+    if (!product) return;
+
+    if (alreadyPurchased) {
+      toast.info('You have already purchased this product. Check your profile.');
+      setIsProfileOpen(true);
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    
+    try {
+      await initiatePayment(
+        product,
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+        },
+        (purchase) => {
+          // Success callback
+          setLastPurchase(purchase);
+          setShowSuccessModal(true);
+          setAlreadyPurchased(true);
+          toast.success('Payment successful!');
+          setIsProcessingPayment(false);
+        },
+        (error) => {
+          // Failure callback
+          toast.error(error);
+          setIsProcessingPayment(false);
+        }
+      );
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.');
+      setIsProcessingPayment(false);
     }
   };
 
@@ -295,6 +354,15 @@ const ProductDetail = () => {
               )}
             </div>
 
+            {/* Already Purchased Badge */}
+            {alreadyPurchased && (
+              <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-green-700 dark:text-green-400 font-medium text-sm">
+                  ✓ You already own this product. Access it from your profile.
+                </p>
+              </div>
+            )}
+
             {/* Description */}
             <div className="mb-8">
               <h3 className="font-semibold text-foreground mb-2">Description</h3>
@@ -331,17 +399,33 @@ const ProductDetail = () => {
                 size="lg"
                 className="w-full py-6 text-base font-semibold gap-3"
                 onClick={handleAddToCart}
+                disabled={alreadyPurchased}
               >
                 <ShoppingCart className="h-6 w-6" />
-                Add to Cart
+                {alreadyPurchased ? 'Already Purchased' : 'Add to Cart'}
               </Button>
               <Button
                 size="lg"
                 className="w-full py-6 text-base font-semibold gap-3 bg-primary hover:bg-primary/90"
                 onClick={handleBuyNow}
+                disabled={isProcessingPayment}
               >
-                <CreditCard className="h-6 w-6" />
-                Buy Now
+                {isProcessingPayment ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    Processing...
+                  </>
+                ) : alreadyPurchased ? (
+                  <>
+                    <CreditCard className="h-6 w-6" />
+                    View in Profile
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-6 w-6" />
+                    Buy Now
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -366,6 +450,12 @@ const ProductDetail = () => {
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ProfilePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      <PaymentSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        purchase={lastPurchase}
+        onViewProfile={() => setIsProfileOpen(true)}
+      />
     </div>
   );
 };

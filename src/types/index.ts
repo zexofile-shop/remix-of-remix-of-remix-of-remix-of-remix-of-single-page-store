@@ -8,7 +8,8 @@ export interface Product {
   type: 'course' | 'website';
   category?: string;
   previewLink?: string;
-  razorpayLink?: string;
+  razorpayLink?: string; // Legacy field - kept for backward compatibility
+  deliveryLink?: string; // Link that user gets after purchase
   content?: string;
   screenshots?: string[];
   youtubeUrl?: string;
