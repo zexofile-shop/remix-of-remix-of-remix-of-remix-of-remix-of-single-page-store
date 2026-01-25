@@ -156,9 +156,8 @@ const Index = () => {
     });
 
   const handleBuyProduct = (product: Product) => {
-    if (product.razorpayLink) {
-      window.open(product.razorpayLink, '_blank');
-    }
+    // Navigate to product detail page for payment
+    window.location.href = `/product/${product.id}`;
   };
 
   const stats = [
@@ -371,7 +370,7 @@ const Index = () => {
 
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         <ProfilePanel isOpen={showProfilePanel} onClose={() => setShowProfilePanel(false)} />
-        <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cart={cart} onRemove={handleRemoveFromCart} />
+        <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cart={cart} onRemove={handleRemoveFromCart} onAuthRequired={() => setShowAuthModal(true)} onProfileOpen={() => setShowProfilePanel(true)} />
       </div>
     </AuthProvider>
   );
