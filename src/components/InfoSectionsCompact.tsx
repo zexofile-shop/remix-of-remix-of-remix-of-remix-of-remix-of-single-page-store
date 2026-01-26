@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ref, onValue, push } from 'firebase/database';
+import { database } from '@/lib/firebase';
 import { 
   Palette, 
   Zap, 
@@ -18,14 +20,35 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { ref, push } from 'firebase/database';
-import { database } from '@/lib/firebase';
+
+interface SiteContent {
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: string;
+  socialInstagram?: string;
+  socialFacebook?: string;
+  socialTwitter?: string;
+}
 
 const InfoSectionsCompact = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [siteContent, setSiteContent] = useState<SiteContent>({});
+
+  // Fetch site content from Firebase
+  useEffect(() => {
+    const siteContentRef = ref(database, 'siteContent');
+    const unsubscribe = onValue(siteContentRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setSiteContent(data);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const offerings = [
     { icon: Palette, title: 'Custom Designs', description: 'Unique personalized products' },
@@ -75,6 +98,10 @@ const InfoSectionsCompact = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Use Firebase data or fallback defaults
+  const contactEmail = siteContent.contactEmail || 'contact@zexofile.com';
+  const contactPhone = siteContent.contactPhone || '+91 98765 43210';
 
   return (
     <>
@@ -163,8 +190,8 @@ const InfoSectionsCompact = () => {
                 </div>
                 <div>
                   <p className="font-medium text-foreground text-sm">Email</p>
-                  <a href="mailto:contact@zexofile.com" className="text-xs text-muted-foreground hover:text-primary">
-                    contact@zexofile.com
+                  <a href={`mailto:${contactEmail}`} className="text-xs text-muted-foreground hover:text-primary">
+                    {contactEmail}
                   </a>
                 </div>
               </div>
@@ -174,19 +201,38 @@ const InfoSectionsCompact = () => {
                 </div>
                 <div>
                   <p className="font-medium text-foreground text-sm">Phone</p>
-                  <p className="text-xs text-muted-foreground">+91 98765 43210</p>
+                  <p className="text-xs text-muted-foreground">{contactPhone}</p>
                 </div>
               </div>
               <div className="flex gap-2 pt-2">
-                <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                  <Instagram className="h-4 w-4" />
-                </a>
-                <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                  <Facebook className="h-4 w-4" />
-                </a>
-                <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                  <Twitter className="h-4 w-4" />
-                </a>
+                {siteContent.socialInstagram && (
+                  <a href={siteContent.socialInstagram} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                )}
+                {siteContent.socialFacebook && (
+                  <a href={siteContent.socialFacebook} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                    <Facebook className="h-4 w-4" />
+                  </a>
+                )}
+                {siteContent.socialTwitter && (
+                  <a href={siteContent.socialTwitter} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                    <Twitter className="h-4 w-4" />
+                  </a>
+                )}
+                {!siteContent.socialInstagram && !siteContent.socialFacebook && !siteContent.socialTwitter && (
+                  <>
+                    <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                    <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                      <Facebook className="h-4 w-4" />
+                    </a>
+                    <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                      <Twitter className="h-4 w-4" />
+                    </a>
+                  </>
+                )}
               </div>
             </div>
 
