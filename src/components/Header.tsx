@@ -1,5 +1,6 @@
-import { Menu, X, ShoppingCart, User } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, Shield } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,8 @@ interface HeaderProps {
 
 const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const navLinks = [
     { label: 'Home', href: '/' },
@@ -23,6 +25,10 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
     { label: 'How to Buy', href: '#how-to-buy' },
     { label: 'Contact', href: '#contact' },
   ];
+
+  const handleAuthClick = () => {
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
@@ -49,6 +55,19 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
 
           {/* Actions */}
           <div className="flex items-center gap-3">
+            {/* Admin Panel Button - Only for admin */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex items-center gap-2 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={() => navigate('/admin')}
+              >
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="icon"
@@ -76,7 +95,7 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
                 variant="default"
                 size="sm"
                 className="bg-primary hover:bg-primary/90"
-                onClick={onAuthClick}
+                onClick={handleAuthClick}
               >
                 Login
               </Button>
@@ -108,6 +127,18 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
                   {link.label}
                 </a>
               ))}
+              {isAdmin && (
+                <button
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors py-2 text-left flex items-center gap-2"
+                  onClick={() => {
+                    navigate('/admin');
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin Panel
+                </button>
+              )}
             </nav>
           </div>
         )}
