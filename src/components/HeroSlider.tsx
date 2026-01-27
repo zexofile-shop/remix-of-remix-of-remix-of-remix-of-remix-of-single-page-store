@@ -94,7 +94,7 @@ const HeroSlider = () => {
   };
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-b from-secondary/50 to-background">
+    <section className="relative w-full overflow-hidden bg-gradient-to-b from-secondary/50 to-background mt-4 md:mt-6">
       {/* Main Slider Container */}
       <div className="relative w-full max-w-7xl mx-auto">
         {/* Slides */}

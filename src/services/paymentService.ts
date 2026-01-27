@@ -1,4 +1,4 @@
-import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, push, set, get, query, orderByChild, equalTo, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { loadRazorpayScript, RAZORPAY_KEY_ID, RazorpayPaymentResponse } from '@/lib/razorpay';
 import { Product } from '@/types';
@@ -13,6 +13,9 @@ export interface PurchaseRecord {
   productType: 'course' | 'website';
   deliveryLink: string;
   amount: number;
+  originalAmount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
   razorpayPaymentId: string;
   purchaseDate: number;
 }
@@ -22,7 +25,8 @@ export const initiatePayment = async (
   product: Product,
   user: { uid: string; email: string | null; displayName: string | null },
   onSuccess: (purchase: PurchaseRecord) => void,
-  onFailure: (error: string) => void
+  onFailure: (error: string) => void,
+  couponData?: { couponId: string; couponCode: string; discount: number }
 ): Promise<void> => {
   // Load Razorpay script
   const isLoaded = await loadRazorpayScript();
@@ -31,8 +35,13 @@ export const initiatePayment = async (
     return;
   }
 
+  // Calculate final amount after coupon discount
+  const originalAmount = product.price;
+  const discount = couponData?.discount || 0;
+  const finalAmount = originalAmount - discount;
+
   // Amount in paise (multiply by 100)
-  const amountInPaise = Math.round(product.price * 100);
+  const amountInPaise = Math.round(finalAmount * 100);
 
   const options = {
     key: RAZORPAY_KEY_ID,
@@ -48,6 +57,7 @@ export const initiatePayment = async (
     notes: {
       productId: product.id,
       userId: user.uid,
+      couponCode: couponData?.couponCode || '',
     },
     theme: {
       color: '#6366f1',
@@ -55,7 +65,18 @@ export const initiatePayment = async (
     handler: async (response: RazorpayPaymentResponse) => {
       try {
         // Save purchase to Firebase
-        const purchase = await savePurchase(product, user, response.razorpay_payment_id);
+        const purchase = await savePurchase(
+          product, 
+          user, 
+          response.razorpay_payment_id,
+          couponData
+        );
+        
+        // Update coupon usage if a coupon was used
+        if (couponData) {
+          await updateCouponUsage(couponData.couponId, user.uid, user.email || '');
+        }
+        
         onSuccess(purchase);
       } catch (error) {
         onFailure('Payment successful but failed to save purchase. Please contact support.');
@@ -72,14 +93,34 @@ export const initiatePayment = async (
   razorpay.open();
 };
 
+// Update coupon usage
+const updateCouponUsage = async (couponId: string, userId: string, userEmail: string): Promise<void> => {
+  const couponRef = ref(database, `coupons/${couponId}`);
+  const snapshot = await get(couponRef);
+  
+  if (snapshot.exists()) {
+    const coupon = snapshot.val();
+    await update(couponRef, {
+      usedCount: (coupon.usedCount || 0) + 1,
+      [`usedBy/${userId}`]: {
+        email: userEmail,
+        usedAt: Date.now(),
+      },
+    });
+  }
+};
+
 // Save purchase to Firebase
 const savePurchase = async (
   product: Product,
   user: { uid: string; email: string | null },
-  razorpayPaymentId: string
+  razorpayPaymentId: string,
+  couponData?: { couponId: string; couponCode: string; discount: number }
 ): Promise<PurchaseRecord> => {
   const purchasesRef = ref(database, 'purchases');
   const newPurchaseRef = push(purchasesRef);
+  
+  const finalAmount = product.price - (couponData?.discount || 0);
   
   const purchase: PurchaseRecord = {
     userId: user.uid,
@@ -89,7 +130,10 @@ const savePurchase = async (
     productImage: product.image,
     productType: product.type,
     deliveryLink: product.deliveryLink || product.razorpayLink || '',
-    amount: product.price,
+    amount: finalAmount,
+    originalAmount: couponData ? product.price : undefined,
+    couponCode: couponData?.couponCode,
+    couponDiscount: couponData?.discount,
     razorpayPaymentId,
     purchaseDate: Date.now(),
   };
