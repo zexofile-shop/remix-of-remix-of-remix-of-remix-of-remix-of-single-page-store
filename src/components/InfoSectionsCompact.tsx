@@ -85,7 +85,7 @@ const InfoSectionsCompact = () => {
         email: email.trim(),
         message: message.trim(),
         createdAt: Date.now(),
-        status: 'unread',
+        read: false,
       });
       
       toast.success('Message sent successfully!');

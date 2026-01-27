@@ -12,6 +12,7 @@ import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
 import PaymentSuccessModal from '@/components/PaymentSuccessModal';
+import CouponInput from '@/components/CouponInput';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { initiatePayment, hasUserPurchasedProduct, PurchaseRecord } from '@/services/paymentService';
@@ -32,6 +33,7 @@ const ProductDetail = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<PurchaseRecord | null>(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; couponId: string } | null>(null);
   
   const inWishlist = id ? isInWishlist(id) : false;
   
@@ -126,6 +128,12 @@ const ProductDetail = () => {
     setIsProcessingPayment(true);
     
     try {
+      const couponData = appliedCoupon ? {
+        couponId: appliedCoupon.couponId,
+        couponCode: appliedCoupon.code,
+        discount: appliedCoupon.discount,
+      } : undefined;
+
       await initiatePayment(
         product,
         {
@@ -138,6 +146,7 @@ const ProductDetail = () => {
           setLastPurchase(purchase);
           setShowSuccessModal(true);
           setAlreadyPurchased(true);
+          setAppliedCoupon(null); // Reset coupon after purchase
           toast.success('Payment successful!');
           setIsProcessingPayment(false);
         },
@@ -145,13 +154,25 @@ const ProductDetail = () => {
           // Failure callback
           toast.error(error);
           setIsProcessingPayment(false);
-        }
+        },
+        couponData
       );
     } catch (error) {
       toast.error('Something went wrong. Please try again.');
       setIsProcessingPayment(false);
     }
   };
+
+  const handleApplyCoupon = (discount: number, couponId: string, couponCode: string) => {
+    setAppliedCoupon({ code: couponCode, discount, couponId });
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+  };
+
+  // Calculate final price
+  const finalPrice = product ? product.price - (appliedCoupon?.discount || 0) : 0;
 
   const handleRemoveFromCart = (productId: string) => {
     setCart((prev) => prev.filter((p) => p.id !== productId));
@@ -338,21 +359,45 @@ const ProductDetail = () => {
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-4 mb-6 flex-wrap">
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
               {hasDiscount && (
                 <span className="text-xl text-muted-foreground line-through">
                   Rs. {product.originalPrice?.toFixed(2)}
                 </span>
               )}
-              <span className="text-3xl font-bold text-primary">
+              <span className={`text-3xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-xl' : 'text-primary'}`}>
                 Rs. {product.price.toFixed(2)}
               </span>
-              {hasDiscount && (
+              {appliedCoupon && (
+                <span className="text-3xl font-bold text-primary">
+                  Rs. {finalPrice.toFixed(2)}
+                </span>
+              )}
+              {hasDiscount && !appliedCoupon && (
                 <Badge variant="secondary" className="bg-green-100 text-green-700">
                   Save {discountPercentage}%
                 </Badge>
               )}
+              {appliedCoupon && (
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  Coupon Applied: -{appliedCoupon.discount}
+                </Badge>
+              )}
             </div>
+
+            {/* Coupon Input - Only show if user is logged in and hasn't purchased */}
+            {user && !alreadyPurchased && (
+              <div className="mb-6">
+                <CouponInput
+                  originalAmount={product.price}
+                  userId={user.uid}
+                  userEmail={user.email || ''}
+                  onApply={handleApplyCoupon}
+                  onRemove={handleRemoveCoupon}
+                  appliedCoupon={appliedCoupon ? { code: appliedCoupon.code, discount: appliedCoupon.discount } : null}
+                />
+              </div>
+            )}
 
             {/* Already Purchased Badge */}
             {alreadyPurchased && (

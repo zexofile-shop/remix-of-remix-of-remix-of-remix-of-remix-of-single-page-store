@@ -4,6 +4,7 @@ import { ref, onValue, push, set, remove, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Product, CustomProject, Purchase, Testimonial } from '@/types';
+import { Coupon, ContactMessage } from '@/types/coupon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +15,8 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { 
   Trash2, Edit, Plus, X, LogOut, Package, Users, FileText, Settings, Image, Star, 
-  MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield
+  MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield,
+  Mail, Ticket, Eye, EyeOff, Percent
 } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import zexofileLogo from '@/assets/zexofile-logo.png';
@@ -285,6 +287,8 @@ const Admin = () => {
   const [bestSelling, setBestSelling] = useState<BestSellingItem[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent>({});
   const [allUsers, setAllUsers] = useState<UserData[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -310,6 +314,13 @@ const Admin = () => {
   const [slideButtonText, setSlideButtonText] = useState('');
   const [slideButtonLink, setSlideButtonLink] = useState('');
   const [slideOrder, setSlideOrder] = useState('1');
+
+  // Coupon form state
+  const [showCouponForm, setShowCouponForm] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState('');
+  const [couponMinOrder, setCouponMinOrder] = useState('');
+  const [couponMaxUses, setCouponMaxUses] = useState('');
 
   // Calculate real stats
   const totalUsers = allUsers.length;
@@ -338,6 +349,8 @@ const Admin = () => {
     const slidesRef = ref(database, 'heroSlides');
     const bestSellingRef = ref(database, 'bestSelling');
     const siteContentRef = ref(database, 'siteContent');
+    const messagesRef = ref(database, 'contactMessages');
+    const couponsRef = ref(database, 'coupons');
 
     const unsubscribePurchases = onValue(purchasesRef, (snapshot) => {
       const data = snapshot.val();
@@ -424,6 +437,22 @@ const Admin = () => {
       }
     });
 
+    const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      const list: ContactMessage[] = data
+        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
+        : [];
+      setContactMessages(list.sort((a, b) => b.createdAt - a.createdAt));
+    });
+
+    const unsubscribeCoupons = onValue(couponsRef, (snapshot) => {
+      const data = snapshot.val();
+      const list: Coupon[] = data
+        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
+        : [];
+      setCoupons(list.sort((a, b) => b.createdAt - a.createdAt));
+    });
+
     return () => {
       unsubscribePurchases();
       unsubscribeUsers();
@@ -434,6 +463,8 @@ const Admin = () => {
       unsubscribeSlides();
       unsubscribeBestSelling();
       unsubscribeSiteContent();
+      unsubscribeMessages();
+      unsubscribeCoupons();
     };
   }, [user, isAdmin]);
 
@@ -607,6 +638,74 @@ const Admin = () => {
     }
   };
 
+  // Contact message functions
+  const handleToggleMessageRead = async (messageId: string, currentRead: boolean) => {
+    try {
+      await update(ref(database, `contactMessages/${messageId}`), { read: !currentRead });
+      toast.success(currentRead ? 'Marked as unread' : 'Marked as read');
+    } catch (error) {
+      toast.error('Failed to update message');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await remove(ref(database, `contactMessages/${messageId}`));
+      toast.success('Message deleted!');
+    } catch (error) {
+      toast.error('Failed to delete message');
+    }
+  };
+
+  // Coupon functions
+  const handleAddCoupon = async () => {
+    if (!couponCode || !couponDiscount || !couponMaxUses) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    try {
+      await push(ref(database, 'coupons'), {
+        code: couponCode.toUpperCase().trim(),
+        discountPercent: parseInt(couponDiscount),
+        minOrderValue: parseInt(couponMinOrder) || 0,
+        maxUses: parseInt(couponMaxUses),
+        usedCount: 0,
+        usedBy: {},
+        active: true,
+        createdAt: Date.now(),
+      });
+      toast.success('Coupon created!');
+      setCouponCode('');
+      setCouponDiscount('');
+      setCouponMinOrder('');
+      setCouponMaxUses('');
+      setShowCouponForm(false);
+    } catch (error) {
+      toast.error('Failed to create coupon');
+    }
+  };
+
+  const handleToggleCouponActive = async (couponId: string, currentActive: boolean) => {
+    try {
+      await update(ref(database, `coupons/${couponId}`), { active: !currentActive });
+      toast.success(currentActive ? 'Coupon deactivated' : 'Coupon activated');
+    } catch (error) {
+      toast.error('Failed to update coupon');
+    }
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    if (!confirm('Delete this coupon?')) return;
+    try {
+      await remove(ref(database, `coupons/${couponId}`));
+      toast.success('Coupon deleted!');
+    } catch (error) {
+      toast.error('Failed to delete coupon');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -700,28 +799,41 @@ const Admin = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="slides" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
-            <TabsTrigger value="slides" className="flex items-center gap-1">
+          <TabsList className="flex flex-wrap w-full gap-1 h-auto p-1 mb-6">
+            <TabsTrigger value="slides" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <Image className="h-4 w-4" />
               <span className="hidden sm:inline">Slides</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-1">
+            <TabsTrigger value="products" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Products</span>
             </TabsTrigger>
-            <TabsTrigger value="testimonials" className="flex items-center gap-1">
+            <TabsTrigger value="messages" className="flex items-center gap-1 flex-1 min-w-[80px] relative">
+              <Mail className="h-4 w-4" />
+              <span className="hidden sm:inline">Messages</span>
+              {contactMessages.filter(m => !m.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {contactMessages.filter(m => !m.read).length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="coupons" className="flex items-center gap-1 flex-1 min-w-[80px]">
+              <Ticket className="h-4 w-4" />
+              <span className="hidden sm:inline">Coupons</span>
+            </TabsTrigger>
+            <TabsTrigger value="testimonials" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <Star className="h-4 w-4" />
               <span className="hidden sm:inline">Reviews</span>
             </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-1">
+            <TabsTrigger value="projects" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Projects</span>
             </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-1">
+            <TabsTrigger value="content" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <MessageSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Content</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-1">
+            <TabsTrigger value="settings" className="flex items-center gap-1 flex-1 min-w-[80px]">
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
@@ -1024,6 +1136,202 @@ const Admin = () => {
             {products.length === 0 && (
               <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
                 No products yet. Add your first product!
+              </p>
+            )}
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-lg">Contact Messages</h3>
+              <p className="text-sm text-muted-foreground">
+                {contactMessages.filter(m => !m.read).length} unread
+              </p>
+            </div>
+            <div className="space-y-3">
+              {contactMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`p-4 bg-card border rounded-xl space-y-2 ${
+                    message.read ? 'border-border' : 'border-primary/50 bg-primary/5'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{message.name}</p>
+                      <p className="text-xs text-muted-foreground">{message.email}</p>
+                      {message.phone && (
+                        <p className="text-xs text-muted-foreground">{message.phone}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(message.createdAt).toLocaleDateString()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleMessageRead(message.id, message.read)}
+                        title={message.read ? 'Mark as unread' : 'Mark as read'}
+                      >
+                        {message.read ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-primary" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteMessage(message.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.message}</p>
+                </div>
+              ))}
+            </div>
+            {contactMessages.length === 0 && (
+              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
+                No messages yet.
+              </p>
+            )}
+          </TabsContent>
+
+          {/* Coupons Tab */}
+          <TabsContent value="coupons" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-lg">Manage Coupons</h3>
+              <Button size="sm" onClick={() => setShowCouponForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Coupon
+              </Button>
+            </div>
+
+            {showCouponForm && (
+              <div className="border border-border rounded-xl p-6 space-y-4 bg-card">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">New Coupon</h4>
+                  <Button variant="ghost" size="sm" onClick={() => setShowCouponForm(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Coupon Code *</Label>
+                    <Input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="e.g., SAVE20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Discount Percent *</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={couponDiscount}
+                        onChange={(e) => setCouponDiscount(e.target.value)}
+                        placeholder="e.g., 20"
+                        min="1"
+                        max="100"
+                      />
+                      <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Minimum Order Value</Label>
+                    <Input
+                      type="number"
+                      value={couponMinOrder}
+                      onChange={(e) => setCouponMinOrder(e.target.value)}
+                      placeholder="e.g., 500 (0 for no min)"
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Uses *</Label>
+                    <Input
+                      type="number"
+                      value={couponMaxUses}
+                      onChange={(e) => setCouponMaxUses(e.target.value)}
+                      placeholder="e.g., 100"
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleAddCoupon} className="w-full">Create Coupon</Button>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {coupons.map((coupon) => (
+                <div
+                  key={coupon.id}
+                  className={`p-4 bg-card border rounded-xl ${
+                    coupon.active ? 'border-green-500/30' : 'border-border opacity-60'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-lg text-primary">{coupon.code}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          coupon.active 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                        }`}>
+                          {coupon.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{coupon.discountPercent}% OFF</span>
+                        {coupon.minOrderValue > 0 && (
+                          <span>Min: ₹{coupon.minOrderValue}</span>
+                        )}
+                        <span>Used: {coupon.usedCount}/{coupon.maxUses}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={coupon.active}
+                        onCheckedChange={() => handleToggleCouponActive(coupon.id, coupon.active)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteCoupon(coupon.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Users who used this coupon */}
+                  {coupon.usedBy && Object.keys(coupon.usedBy).length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Used by:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(coupon.usedBy).map(([userId, usage]) => (
+                          <span 
+                            key={userId} 
+                            className="px-2 py-1 text-xs bg-secondary rounded-full"
+                            title={new Date(usage.usedAt).toLocaleString()}
+                          >
+                            {usage.email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {coupons.length === 0 && (
+              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
+                No coupons yet. Create your first coupon!
               </p>
             )}
           </TabsContent>
