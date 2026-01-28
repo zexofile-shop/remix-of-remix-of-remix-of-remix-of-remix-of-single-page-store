@@ -13,6 +13,7 @@ export interface Product {
   content?: string;
   screenshots?: string[];
   youtubeUrl?: string;
+  isFreeResource?: boolean; // Products with price 0 can be marked as free
   createdAt: number;
 }
 
