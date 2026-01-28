@@ -84,6 +84,7 @@ firebase-database/
 │       ├── content?: string
 │       ├── screenshots?: string[]
 │       ├── youtubeUrl?: string
+│       ├── isFreeResource?: boolean  // For free products
 │       └── createdAt: number
 │
 ├── purchases/
@@ -169,7 +170,11 @@ firebase-database/
 
 ### Configuration
 ```typescript
-export const RAZORPAY_KEY_ID = 'rzp_test_XXXXXXXXXX'; // Your Razorpay Key ID
+// Live API Key (Publishable - safe for frontend)
+export const RAZORPAY_KEY_ID = 'rzp_live_XXXXXXXXXX'; // Your Razorpay Live Key ID
+
+// Note: Secret key should NEVER be in frontend
+// Use Firebase Cloud Functions for server-side verification
 
 // Load script dynamically
 export const loadRazorpayScript = (): Promise<boolean> => {
@@ -193,6 +198,11 @@ export const loadRazorpayScript = (): Promise<boolean> => {
 3. Initiate Razorpay checkout with product details
 4. On success: Save purchase to Firebase, show success modal with delivery link
 5. Purchase history available in user profile
+
+### Free Resources
+- Products with price 0 can be marked as "Free Resource" in admin
+- Free resources bypass payment and give instant access
+- User still needs to be logged in to access
 
 ---
 

@@ -305,6 +305,7 @@ const Admin = () => {
   const [content, setContent] = useState('');
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [isFreeResource, setIsFreeResource] = useState(false);
 
   // Slide form state
   const [showSlideForm, setShowSlideForm] = useState(false);
@@ -479,6 +480,7 @@ const Admin = () => {
     setContent('');
     setScreenshots([]);
     setYoutubeUrl('');
+    setIsFreeResource(false);
     setEditingProduct(null);
   };
 
@@ -488,10 +490,11 @@ const Admin = () => {
       return;
     }
 
+    const priceNum = parseFloat(price);
     const productData = {
       title,
       description,
-      price: parseFloat(price),
+      price: priceNum,
       originalPrice: originalPrice ? parseFloat(originalPrice) : null,
       image,
       previewLink,
@@ -500,6 +503,7 @@ const Admin = () => {
       content,
       screenshots: screenshots.length > 0 ? screenshots : null,
       youtubeUrl: youtubeUrl || null,
+      isFreeResource: priceNum === 0 ? isFreeResource : false,
       createdAt: Date.now(),
     };
 
@@ -545,6 +549,7 @@ const Admin = () => {
     setContent(product.content || '');
     setScreenshots(product.screenshots || []);
     setYoutubeUrl(product.youtubeUrl || '');
+    setIsFreeResource(product.isFreeResource || false);
     setShowProductForm(true);
   };
 
@@ -1087,6 +1092,24 @@ const Admin = () => {
                       rows={4}
                     />
                   </div>
+                  
+                  {/* Free Resource Toggle - Only show for price 0 */}
+                  {parseFloat(price) === 0 && (
+                    <div className="col-span-2 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-green-700 dark:text-green-400 font-medium">Mark as Free Resource</Label>
+                          <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                            Free resources can be accessed directly without payment
+                          </p>
+                        </div>
+                        <Switch
+                          checked={isFreeResource}
+                          onCheckedChange={setIsFreeResource}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button onClick={handleSaveProduct} className="w-full">
                   {editingProduct ? 'Update Product' : 'Add Product'}
@@ -1114,9 +1137,18 @@ const Admin = () => {
                     <h4 className="font-medium truncate">{product.title}</h4>
                     <p className="text-sm text-muted-foreground truncate">{product.description}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="font-bold text-primary">₹{product.price}</span>
-                      {product.originalPrice && (
-                        <span className="text-sm text-muted-foreground line-through">₹{product.originalPrice}</span>
+                      {product.price === 0 && product.isFreeResource ? (
+                        <span className="font-bold text-green-600">FREE</span>
+                      ) : (
+                        <>
+                          <span className="font-bold text-primary">₹{product.price}</span>
+                          {product.originalPrice && (
+                            <span className="text-sm text-muted-foreground line-through">₹{product.originalPrice}</span>
+                          )}
+                        </>
+                      )}
+                      {product.isFreeResource && (
+                        <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Free Resource</span>
                       )}
                     </div>
                     <div className="flex gap-2 mt-3">

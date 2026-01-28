@@ -125,6 +125,12 @@ const ProductDetail = () => {
       return;
     }
 
+    // Handle free resources - no payment needed
+    if (product.price === 0 && product.isFreeResource) {
+      handleGetFreeResource();
+      return;
+    }
+
     setIsProcessingPayment(true);
     
     try {
@@ -159,6 +165,26 @@ const ProductDetail = () => {
       );
     } catch (error) {
       toast.error('Something went wrong. Please try again.');
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Handle free resource access
+  const handleGetFreeResource = async () => {
+    if (!user || !product) return;
+    
+    setIsProcessingPayment(true);
+    try {
+      // Save as a free purchase
+      const { saveFreeResourceAccess } = await import('@/services/paymentService');
+      const purchase = await saveFreeResourceAccess(product, user);
+      setLastPurchase(purchase);
+      setShowSuccessModal(true);
+      setAlreadyPurchased(true);
+      toast.success('Free resource unlocked!');
+    } catch (error) {
+      toast.error('Failed to access resource. Please try again.');
+    } finally {
       setIsProcessingPayment(false);
     }
   };
@@ -360,33 +386,44 @@ const ProductDetail = () => {
 
             {/* Price */}
             <div className="flex items-center gap-4 mb-4 flex-wrap">
-              {hasDiscount && (
-                <span className="text-xl text-muted-foreground line-through">
-                  Rs. {product.originalPrice?.toFixed(2)}
-                </span>
-              )}
-              <span className={`text-3xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-xl' : 'text-primary'}`}>
-                Rs. {product.price.toFixed(2)}
-              </span>
-              {appliedCoupon && (
-                <span className="text-3xl font-bold text-primary">
-                  Rs. {finalPrice.toFixed(2)}
-                </span>
-              )}
-              {hasDiscount && !appliedCoupon && (
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                  Save {discountPercentage}%
-                </Badge>
-              )}
-              {appliedCoupon && (
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                  Coupon Applied: -{appliedCoupon.discount}
-                </Badge>
+              {product.price === 0 && product.isFreeResource ? (
+                <>
+                  <span className="text-3xl font-bold text-green-600">FREE</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                    Free Resource
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  {hasDiscount && (
+                    <span className="text-xl text-muted-foreground line-through">
+                      Rs. {product.originalPrice?.toFixed(2)}
+                    </span>
+                  )}
+                  <span className={`text-3xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-xl' : 'text-primary'}`}>
+                    Rs. {product.price.toFixed(2)}
+                  </span>
+                  {appliedCoupon && (
+                    <span className="text-3xl font-bold text-primary">
+                      Rs. {finalPrice.toFixed(2)}
+                    </span>
+                  )}
+                  {hasDiscount && !appliedCoupon && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700">
+                      Save {discountPercentage}%
+                    </Badge>
+                  )}
+                  {appliedCoupon && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700">
+                      Coupon Applied: -{appliedCoupon.discount}
+                    </Badge>
+                  )}
+                </>
               )}
             </div>
 
-            {/* Coupon Input - Only show if user is logged in and hasn't purchased */}
-            {user && !alreadyPurchased && (
+            {/* Coupon Input - Only show if user is logged in, hasn't purchased, and not a free resource */}
+            {user && !alreadyPurchased && product.price > 0 && (
               <div className="mb-6">
                 <CouponInput
                   originalAmount={product.price}
@@ -439,19 +476,26 @@ const ProductDetail = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-4 mt-auto">
+              {/* Hide Add to Cart for free resources */}
+              {!(product.price === 0 && product.isFreeResource) && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full py-6 text-base font-semibold gap-3"
+                  onClick={handleAddToCart}
+                  disabled={alreadyPurchased}
+                >
+                  <ShoppingCart className="h-6 w-6" />
+                  {alreadyPurchased ? 'Already Purchased' : 'Add to Cart'}
+                </Button>
+              )}
               <Button
-                variant="outline"
                 size="lg"
-                className="w-full py-6 text-base font-semibold gap-3"
-                onClick={handleAddToCart}
-                disabled={alreadyPurchased}
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {alreadyPurchased ? 'Already Purchased' : 'Add to Cart'}
-              </Button>
-              <Button
-                size="lg"
-                className="w-full py-6 text-base font-semibold gap-3 bg-primary hover:bg-primary/90"
+                className={`w-full py-6 text-base font-semibold gap-3 ${
+                  product.price === 0 && product.isFreeResource 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-primary hover:bg-primary/90'
+                }`}
                 onClick={handleBuyNow}
                 disabled={isProcessingPayment}
               >
@@ -464,6 +508,11 @@ const ProductDetail = () => {
                   <>
                     <CreditCard className="h-6 w-6" />
                     View in Profile
+                  </>
+                ) : product.price === 0 && product.isFreeResource ? (
+                  <>
+                    <ShoppingCart className="h-6 w-6" />
+                    Get Free Access
                   </>
                 ) : (
                   <>

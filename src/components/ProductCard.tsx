@@ -45,11 +45,15 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
           alt={product.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        {hasDiscount && (
+        {product.price === 0 && product.isFreeResource ? (
+          <Badge className="absolute top-3 left-3 bg-green-600 text-white font-bold">
+            FREE
+          </Badge>
+        ) : hasDiscount ? (
           <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground font-bold">
             {discountPercentage}% OFF
           </Badge>
-        )}
+        ) : null}
         <button 
           className={`absolute top-3 right-3 p-2 backdrop-blur-sm rounded-full transition-colors ${
             inWishlist 
@@ -71,18 +75,29 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
         </p>
         
         <div className="flex items-center gap-2 flex-wrap">
-          {hasDiscount && (
-            <span className="text-xs text-muted-foreground line-through">
-              Rs. {product.originalPrice?.toFixed(2)}
-            </span>
-          )}
-          <span className="font-bold text-primary">
-            Rs. {product.price.toFixed(2)}
-          </span>
-          {hasDiscount && (
-            <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-              Save {discountPercentage}%
-            </Badge>
+          {product.price === 0 && product.isFreeResource ? (
+            <>
+              <span className="font-bold text-green-600">FREE</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                Free Resource
+              </Badge>
+            </>
+          ) : (
+            <>
+              {hasDiscount && (
+                <span className="text-xs text-muted-foreground line-through">
+                  Rs. {product.originalPrice?.toFixed(2)}
+                </span>
+              )}
+              <span className="font-bold text-primary">
+                Rs. {product.price.toFixed(2)}
+              </span>
+              {hasDiscount && (
+                <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                  Save {discountPercentage}%
+                </Badge>
+              )}
+            </>
           )}
         </div>
       </div>

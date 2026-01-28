@@ -171,3 +171,29 @@ export const hasUserPurchasedProduct = async (userId: string, productId: string)
   const purchases = await getUserPurchases(userId);
   return purchases.some(p => p.productId === productId);
 };
+
+// Save free resource access (no payment required)
+export const saveFreeResourceAccess = async (
+  product: Product,
+  user: { uid: string; email: string | null }
+): Promise<PurchaseRecord> => {
+  const purchasesRef = ref(database, 'purchases');
+  const newPurchaseRef = push(purchasesRef);
+  
+  const purchase: PurchaseRecord = {
+    userId: user.uid,
+    userEmail: user.email || '',
+    productId: product.id,
+    productTitle: product.title,
+    productImage: product.image,
+    productType: product.type,
+    deliveryLink: product.deliveryLink || product.razorpayLink || '',
+    amount: 0,
+    razorpayPaymentId: 'FREE_RESOURCE',
+    purchaseDate: Date.now(),
+  };
+
+  await set(newPurchaseRef, purchase);
+  
+  return { ...purchase, id: newPurchaseRef.key! };
+};

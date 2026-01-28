@@ -1,5 +1,7 @@
-// Razorpay Configuration
-export const RAZORPAY_KEY_ID = 'rzp_test_S88KrnCrl3ZAV8';
+// Razorpay Configuration - Live API Key (Publishable)
+// Note: Secret key (Jr5Ht3hB6uVQLElQi2o476b2) should NEVER be in frontend
+// It should only be used in server-side verification (Firebase Cloud Functions)
+export const RAZORPAY_KEY_ID = 'rzp_live_S8ySfCUBNdWfmi';
 
 // Load Razorpay script dynamically
 export const loadRazorpayScript = (): Promise<boolean> => {
