@@ -14,16 +14,35 @@ export interface Product {
   screenshots?: string[];
   youtubeUrl?: string;
   isFreeResource?: boolean; // Products with price 0 can be marked as free
+  allowCustomization?: boolean; // Allow user to customize before purchase
   createdAt: number;
 }
 
 export interface Purchase {
   id: string;
   userId: string;
+  userEmail?: string;
   productId: string;
+  productTitle?: string;
+  productImage?: string;
   productType: 'course' | 'website';
   purchaseDate: number;
   amount: number;
+  razorpayPaymentId?: string;
+  deliveryLink?: string;
+  purchaseType?: 'source_code' | 'customized';
+  customizationData?: CustomizationFormData;
+}
+
+export interface CustomizationFormData {
+  name: string;
+  instagramTelegramId?: string;
+  callingNumber: string;
+  whatsappNumber: string;
+  alternativeNumber?: string;
+  photos?: string[];
+  videoDriveLink?: string;
+  submittedAt: number;
 }
 
 export interface CustomProject {
@@ -47,4 +66,13 @@ export interface Testimonial {
   rating: number;
   createdAt: number;
   approved: boolean;
+}
+
+export interface SupportChannels {
+  telegram1?: string;
+  telegram2?: string;
+  whatsapp1?: string;
+  whatsapp2?: string;
+  phone1?: string;
+  phone2?: string;
 }
