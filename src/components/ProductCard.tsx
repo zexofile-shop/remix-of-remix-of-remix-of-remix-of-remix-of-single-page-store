@@ -39,11 +39,11 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
       className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 group cursor-pointer"
       onClick={handleCardClick}
     >
-      <div className="relative aspect-[4/3] overflow-hidden gradient-card">
+      <div className="relative aspect-[4/3] overflow-hidden gradient-card bg-secondary/30">
         <img
           src={product.image}
           alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-contain bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
         />
         {product.price === 0 && product.isFreeResource ? (
           <Badge className="absolute top-3 left-3 bg-green-600 text-white font-bold">

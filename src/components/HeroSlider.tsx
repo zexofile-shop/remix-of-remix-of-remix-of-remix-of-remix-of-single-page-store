@@ -96,9 +96,9 @@ const HeroSlider = () => {
   return (
     <section className="relative w-full overflow-hidden bg-gradient-to-b from-secondary/50 to-background mt-4 md:mt-6">
       {/* Main Slider Container */}
-      <div className="relative w-full max-w-7xl mx-auto">
+      <div className="relative w-full max-w-7xl mx-auto px-2 md:px-4">
         {/* Slides */}
-        <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-b-3xl md:rounded-b-[3rem]">
+        <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 shadow-lg">
           {displaySlides.map((slide, index) => (
             <div
               key={slide.id}
@@ -117,33 +117,33 @@ const HeroSlider = () => {
                 className="w-full h-full object-cover"
               />
               
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-transparent" />
+              {/* Subtle Gradient Overlay - Very light */}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/30 via-transparent to-transparent" />
             </div>
           ))}
         </div>
 
         {/* Content Overlay - Below image on mobile, overlay on desktop */}
-        <div className="relative md:absolute md:bottom-0 md:left-0 md:right-0 p-6 md:p-12 bg-background md:bg-transparent">
+        <div className="relative md:absolute md:bottom-0 md:left-0 md:right-0 p-4 md:p-8 bg-background md:bg-transparent">
           <div className="max-w-2xl animate-fade-in">
             {displaySlides[currentIndex]?.title && (
-              <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 leading-tight">
+              <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2 leading-tight">
                 {displaySlides[currentIndex].title}
               </h2>
             )}
             {displaySlides[currentIndex]?.subtitle && (
-              <p className="text-sm md:text-lg text-muted-foreground mb-6 max-w-lg">
+              <p className="text-sm md:text-base text-muted-foreground mb-4 max-w-lg">
                 {displaySlides[currentIndex].subtitle}
               </p>
             )}
             {displaySlides[currentIndex]?.buttonText && (
               <Button
                 size="lg"
-                className="rounded-full px-8 py-6 text-base font-semibold shadow-lg hover:scale-105 transition-transform bg-foreground text-background hover:bg-foreground/90"
+                className="rounded-full px-6 py-5 text-sm font-semibold shadow-lg hover:scale-105 transition-transform bg-foreground text-background hover:bg-foreground/90"
                 onClick={() => handleButtonClick(displaySlides[currentIndex]?.buttonLink)}
               >
-                <Play className="h-5 w-5 mr-2 fill-current" />
+                <Play className="h-4 w-4 mr-2 fill-current" />
                 {displaySlides[currentIndex].buttonText}
               </Button>
             )}
@@ -156,7 +156,7 @@ const HeroSlider = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 md:left-6 top-1/3 md:top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 rounded-full bg-background/80 hover:bg-background shadow-lg backdrop-blur-sm border border-border"
+              className="absolute left-4 md:left-6 top-1/3 md:top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 rounded-full bg-background/80 hover:bg-background shadow-lg backdrop-blur-sm border border-border"
               onClick={prevSlide}
             >
               <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
@@ -164,7 +164,7 @@ const HeroSlider = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 md:right-6 top-1/3 md:top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 rounded-full bg-background/80 hover:bg-background shadow-lg backdrop-blur-sm border border-border"
+              className="absolute right-4 md:right-6 top-1/3 md:top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 rounded-full bg-background/80 hover:bg-background shadow-lg backdrop-blur-sm border border-border"
               onClick={nextSlide}
             >
               <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
@@ -175,7 +175,7 @@ const HeroSlider = () => {
 
       {/* Dots Indicator */}
       {displaySlides.length > 1 && (
-        <div className="flex justify-center gap-2 py-6">
+        <div className="flex justify-center gap-2 py-4">
           {displaySlides.map((_, index) => (
             <button
               key={index}

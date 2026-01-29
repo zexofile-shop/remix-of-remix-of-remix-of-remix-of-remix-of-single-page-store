@@ -3,19 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product } from '@/types';
+import { Product, CustomizationFormData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2, Package, Palette } from 'lucide-react';
 import Header from '@/components/Header';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
 import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import CouponInput from '@/components/CouponInput';
+import CustomizationForm from '@/components/CustomizationForm';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
-import { initiatePayment, hasUserPurchasedProduct, PurchaseRecord } from '@/services/paymentService';
+import { initiatePayment, hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from '@/services/paymentService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +34,10 @@ const ProductDetail = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<PurchaseRecord | null>(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
+  const [checkingPurchase, setCheckingPurchase] = useState(true);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; couponId: string } | null>(null);
+  const [showCustomizationForm, setShowCustomizationForm] = useState(false);
+  const [purchaseType, setPurchaseType] = useState<'source_code' | 'customized'>('source_code');
   
   const inWishlist = id ? isInWishlist(id) : false;
   
@@ -52,8 +56,17 @@ const ProductDetail = () => {
   useEffect(() => {
     const checkPurchase = async () => {
       if (user && id) {
-        const purchased = await hasUserPurchasedProduct(user.uid, id);
-        setAlreadyPurchased(purchased);
+        setCheckingPurchase(true);
+        try {
+          const purchased = await hasUserPurchasedProduct(user.uid, id);
+          setAlreadyPurchased(purchased);
+        } catch (error) {
+          console.error('Error checking purchase:', error);
+        } finally {
+          setCheckingPurchase(false);
+        }
+      } else {
+        setCheckingPurchase(false);
       }
     };
     checkPurchase();
@@ -110,7 +123,7 @@ const ProductDetail = () => {
     }
   };
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = async (type: 'source_code' | 'customized' = 'source_code') => {
     if (!user) {
       toast.error('Please login to make a purchase');
       setIsAuthOpen(true);
@@ -121,7 +134,14 @@ const ProductDetail = () => {
 
     if (alreadyPurchased) {
       toast.info('You have already purchased this product. Check your profile.');
-      setIsProfileOpen(true);
+      navigate('/profile');
+      return;
+    }
+
+    // If customization is selected, show the form first
+    if (type === 'customized' && product.allowCustomization) {
+      setPurchaseType('customized');
+      setShowCustomizationForm(true);
       return;
     }
 
@@ -130,6 +150,13 @@ const ProductDetail = () => {
       handleGetFreeResource();
       return;
     }
+
+    setPurchaseType(type);
+    processPayment(type);
+  };
+
+  const processPayment = async (type: 'source_code' | 'customized', customizationData?: CustomizationFormData) => {
+    if (!user || !product) return;
 
     setIsProcessingPayment(true);
     
@@ -148,16 +175,20 @@ const ProductDetail = () => {
           displayName: user.displayName,
         },
         (purchase) => {
-          // Success callback
-          setLastPurchase(purchase);
+          // Add purchase type and customization data
+          const enrichedPurchase = {
+            ...purchase,
+            purchaseType: type,
+            customizationData: customizationData,
+          };
+          setLastPurchase(enrichedPurchase);
           setShowSuccessModal(true);
           setAlreadyPurchased(true);
-          setAppliedCoupon(null); // Reset coupon after purchase
+          setAppliedCoupon(null);
           toast.success('Payment successful!');
           setIsProcessingPayment(false);
         },
         (error) => {
-          // Failure callback
           toast.error(error);
           setIsProcessingPayment(false);
         },
@@ -175,8 +206,6 @@ const ProductDetail = () => {
     
     setIsProcessingPayment(true);
     try {
-      // Save as a free purchase
-      const { saveFreeResourceAccess } = await import('@/services/paymentService');
       const purchase = await saveFreeResourceAccess(product, user);
       setLastPurchase(purchase);
       setShowSuccessModal(true);
@@ -187,6 +216,12 @@ const ProductDetail = () => {
     } finally {
       setIsProcessingPayment(false);
     }
+  };
+
+  const handleCustomizationSubmit = async (data: CustomizationFormData) => {
+    // After form submission, proceed with payment
+    setShowCustomizationForm(false);
+    await processPayment('customized', data);
   };
 
   const handleApplyCoupon = (discount: number, couponId: string, couponCode: string) => {
@@ -209,23 +244,28 @@ const ProductDetail = () => {
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : 0;
 
-  // Screenshot slider navigation
-  const screenshots = product?.screenshots || [];
-  const allImages = [product?.image, ...screenshots].filter(Boolean) as string[];
-  
-  const nextScreenshot = () => {
-    setCurrentScreenshotIndex((prev) => (prev + 1) % allImages.length);
-  };
-
-  const prevScreenshot = () => {
-    setCurrentScreenshotIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
-
   // Extract YouTube video ID from URL
   const getYouTubeVideoId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return match && match[2].length === 11 ? match[2] : null;
+  };
+
+  const youtubeVideoId = product?.youtubeUrl ? getYouTubeVideoId(product.youtubeUrl) : null;
+
+  // Build media items array (images + video at the end)
+  const screenshots = product?.screenshots || [];
+  const allImages = [product?.image, ...screenshots].filter(Boolean) as string[];
+  const hasVideo = !!youtubeVideoId;
+  const totalMediaItems = allImages.length + (hasVideo ? 1 : 0);
+  const isVideoSlide = hasVideo && currentScreenshotIndex === allImages.length;
+  
+  const nextScreenshot = () => {
+    setCurrentScreenshotIndex((prev) => (prev + 1) % totalMediaItems);
+  };
+
+  const prevScreenshot = () => {
+    setCurrentScreenshotIndex((prev) => (prev - 1 + totalMediaItems) % totalMediaItems);
   };
 
   if (loading) {
@@ -245,8 +285,6 @@ const ProductDetail = () => {
     );
   }
 
-  const youtubeVideoId = product.youtubeUrl ? getYouTubeVideoId(product.youtubeUrl) : null;
-
   return (
     <div className="min-h-screen bg-background">
       <Header
@@ -256,29 +294,44 @@ const ProductDetail = () => {
         onProfileClick={() => setIsProfileOpen(true)}
       />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Back Button */}
         <Button
           variant="ghost"
-          className="mb-6 gap-2"
+          className="mb-4 gap-2"
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Product Image with Slider */}
-          <div className="space-y-4">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-10">
+          {/* Product Image/Video Carousel */}
+          <div className="space-y-3">
             <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-secondary/30">
-                <img
-                  src={allImages[currentScreenshotIndex] || product.image}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
+              <div className="aspect-square rounded-2xl overflow-hidden bg-secondary/30 border border-border">
+                {isVideoSlide ? (
+                  <div className="w-full h-full flex items-center justify-center bg-black">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                      title="Product Video"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={allImages[currentScreenshotIndex] || product.image}
+                    alt={product.title}
+                    className="w-full h-full object-contain bg-secondary/20"
+                  />
+                )}
               </div>
-              {hasDiscount && (
+              {hasDiscount && !isVideoSlide && (
                 <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground text-lg px-3 py-1">
                   {discountPercentage}% OFF
                 </Badge>
@@ -294,8 +347,8 @@ const ProductDetail = () => {
                 <Heart className={`h-6 w-6 ${inWishlist ? 'fill-primary' : ''}`} />
               </button>
               
-              {/* Navigation arrows for screenshots */}
-              {allImages.length > 1 && (
+              {/* Navigation arrows */}
+              {totalMediaItems > 1 && (
                 <>
                   <Button
                     variant="ghost"
@@ -317,8 +370,8 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Screenshot Thumbnails */}
-            {allImages.length > 1 && (
+            {/* Thumbnails (including video) */}
+            {totalMediaItems > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {allImages.map((img, index) => (
                   <button
@@ -337,58 +390,48 @@ const ProductDetail = () => {
                     />
                   </button>
                 ))}
-              </div>
-            )}
-
-            {/* YouTube Video */}
-            {youtubeVideoId && (
-              <div className="mt-4">
-                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  Product Video
-                </h3>
-                <div className="aspect-video rounded-xl overflow-hidden bg-secondary/30">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                    title="Product Video"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full"
-                  />
-                </div>
+                {hasVideo && (
+                  <button
+                    onClick={() => setCurrentScreenshotIndex(allImages.length)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex items-center justify-center bg-black ${
+                      isVideoSlide 
+                        ? 'border-primary' 
+                        : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <Play className="h-6 w-6 text-white fill-white" />
+                  </button>
+                )}
               </div>
             )}
           </div>
 
           {/* Product Details */}
           <div className="flex flex-col">
-            <div className="mb-4">
+            <div className="mb-3">
               {product.category && (
                 <span className="text-sm text-primary font-medium">{product.category}</span>
               )}
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-1">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground mt-1">
                 {product.title}
               </h1>
             </div>
 
             {/* Ratings */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 text-gold fill-gold" />
+                  <Star key={i} className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">(4.9 rating)</span>
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-4 mb-4 flex-wrap">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
               {product.price === 0 && product.isFreeResource ? (
                 <>
-                  <span className="text-3xl font-bold text-green-600">FREE</span>
+                  <span className="text-2xl font-bold text-green-600">FREE</span>
                   <Badge variant="secondary" className="bg-green-100 text-green-700">
                     Free Resource
                   </Badge>
@@ -396,15 +439,15 @@ const ProductDetail = () => {
               ) : (
                 <>
                   {hasDiscount && (
-                    <span className="text-xl text-muted-foreground line-through">
+                    <span className="text-lg text-muted-foreground line-through">
                       Rs. {product.originalPrice?.toFixed(2)}
                     </span>
                   )}
-                  <span className={`text-3xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-xl' : 'text-primary'}`}>
+                  <span className={`text-2xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-lg' : 'text-primary'}`}>
                     Rs. {product.price.toFixed(2)}
                   </span>
                   {appliedCoupon && (
-                    <span className="text-3xl font-bold text-primary">
+                    <span className="text-2xl font-bold text-primary">
                       Rs. {finalPrice.toFixed(2)}
                     </span>
                   )}
@@ -415,16 +458,16 @@ const ProductDetail = () => {
                   )}
                   {appliedCoupon && (
                     <Badge variant="secondary" className="bg-green-100 text-green-700">
-                      Coupon Applied: -{appliedCoupon.discount}
+                      Coupon: -{appliedCoupon.discount}
                     </Badge>
                   )}
                 </>
               )}
             </div>
 
-            {/* Coupon Input - Only show if user is logged in, hasn't purchased, and not a free resource */}
+            {/* Coupon Input */}
             {user && !alreadyPurchased && product.price > 0 && (
-              <div className="mb-6">
+              <div className="mb-4">
                 <CouponInput
                   originalAmount={product.price}
                   userId={user.uid}
@@ -446,20 +489,20 @@ const ProductDetail = () => {
             )}
 
             {/* Description */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="font-semibold text-foreground mb-2">Description</h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 {product.description}
               </p>
               {product.content && (
-                <div className="mt-4 text-muted-foreground whitespace-pre-line">
+                <div className="mt-3 text-sm text-muted-foreground whitespace-pre-line">
                   {product.content}
                 </div>
               )}
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="flex flex-col items-center p-3 bg-secondary/30 rounded-xl">
                 <Truck className="h-5 w-5 text-primary mb-1" />
                 <span className="text-xs text-muted-foreground text-center">Instant Delivery</span>
@@ -475,52 +518,79 @@ const ProductDetail = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-4 mt-auto">
-              {/* Hide Add to Cart for free resources */}
-              {!(product.price === 0 && product.isFreeResource) && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full py-6 text-base font-semibold gap-3"
-                  onClick={handleAddToCart}
-                  disabled={alreadyPurchased}
-                >
-                  <ShoppingCart className="h-6 w-6" />
-                  {alreadyPurchased ? 'Already Purchased' : 'Add to Cart'}
+            <div className="flex flex-col gap-3 mt-auto">
+              {checkingPurchase ? (
+                <Button size="lg" disabled className="w-full py-6">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Checking...
                 </Button>
+              ) : alreadyPurchased ? (
+                <Button
+                  size="lg"
+                  className="w-full py-6 text-base font-semibold"
+                  onClick={() => navigate('/profile')}
+                >
+                  <Package className="h-5 w-5 mr-2" />
+                  View in Profile
+                </Button>
+              ) : product.price === 0 && product.isFreeResource ? (
+                <Button
+                  size="lg"
+                  className="w-full py-6 text-base font-semibold bg-green-600 hover:bg-green-700"
+                  onClick={handleGetFreeResource}
+                  disabled={isProcessingPayment}
+                >
+                  {isProcessingPayment ? (
+                    <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
+                  ) : (
+                    <><ShoppingCart className="h-5 w-5 mr-2" />Get Free Access</>
+                  )}
+                </Button>
+              ) : (
+                <>
+                  {/* Source Code Only Button */}
+                  <Button
+                    size="lg"
+                    className="w-full py-6 text-base font-semibold"
+                    onClick={() => handleBuyNow('source_code')}
+                    disabled={isProcessingPayment}
+                  >
+                    {isProcessingPayment && purchaseType === 'source_code' ? (
+                      <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
+                    ) : (
+                      <><CreditCard className="h-5 w-5 mr-2" />Buy Source Code</>
+                    )}
+                  </Button>
+
+                  {/* Customize Button - Only if allowed */}
+                  {product.allowCustomization && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full py-6 text-base font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                      onClick={() => handleBuyNow('customized')}
+                      disabled={isProcessingPayment}
+                    >
+                      {isProcessingPayment && purchaseType === 'customized' ? (
+                        <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
+                      ) : (
+                        <><Palette className="h-5 w-5 mr-2" />Get Customized</>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Add to Cart - Only for non-free products */}
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className="w-full py-6 text-base font-semibold"
+                    onClick={handleAddToCart}
+                  >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Add to Cart
+                  </Button>
+                </>
               )}
-              <Button
-                size="lg"
-                className={`w-full py-6 text-base font-semibold gap-3 ${
-                  product.price === 0 && product.isFreeResource 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-primary hover:bg-primary/90'
-                }`}
-                onClick={handleBuyNow}
-                disabled={isProcessingPayment}
-              >
-                {isProcessingPayment ? (
-                  <>
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    Processing...
-                  </>
-                ) : alreadyPurchased ? (
-                  <>
-                    <CreditCard className="h-6 w-6" />
-                    View in Profile
-                  </>
-                ) : product.price === 0 && product.isFreeResource ? (
-                  <>
-                    <ShoppingCart className="h-6 w-6" />
-                    Get Free Access
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-6 w-6" />
-                    Buy Now
-                  </>
-                )}
-              </Button>
             </div>
           </div>
         </div>
@@ -548,7 +618,13 @@ const ProductDetail = () => {
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         purchase={lastPurchase}
-        onViewProfile={() => setIsProfileOpen(true)}
+        onViewProfile={() => navigate('/profile')}
+      />
+      <CustomizationForm
+        isOpen={showCustomizationForm}
+        onClose={() => setShowCustomizationForm(false)}
+        onSubmit={handleCustomizationSubmit}
+        productTitle={product.title}
       />
     </div>
   );

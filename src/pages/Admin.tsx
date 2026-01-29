@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ref, onValue, push, set, remove, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product, CustomProject, Purchase, Testimonial } from '@/types';
+import { Product, CustomProject, Purchase, Testimonial, SupportChannels } from '@/types';
 import { Coupon, ContactMessage } from '@/types/coupon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
   Trash2, Edit, Plus, X, LogOut, Package, Users, FileText, Settings, Image, Star, 
   MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield,
-  Mail, Ticket, Eye, EyeOff, Percent
+  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User
 } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import zexofileLogo from '@/assets/zexofile-logo.png';
@@ -56,6 +57,13 @@ interface UserData {
   id: string;
   email: string;
   createdAt?: number;
+}
+
+interface UserStats {
+  email: string;
+  totalPurchases: number;
+  totalSpent: number;
+  products: { title: string; amount: number; date: number }[];
 }
 
 // Image Upload Field Component
@@ -98,8 +106,8 @@ const ImageUploadField = ({ value, onChange, placeholder = "Enter image URL or u
   return (
     <div className="space-y-2">
       {value && (
-        <div className="relative w-full h-24 rounded-lg overflow-hidden bg-secondary/30 group">
-          <img src={value} alt="Preview" className="w-full h-full object-cover" />
+        <div className="relative w-full h-20 rounded-lg overflow-hidden bg-secondary/30 group">
+          <img src={value} alt="Preview" className="w-full h-full object-contain" />
           <button
             onClick={() => onChange('')}
             className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -116,7 +124,7 @@ const ImageUploadField = ({ value, onChange, placeholder = "Enter image URL or u
           onClick={() => setShowUrlInput(false)}
           className="flex-1"
         >
-          <Upload className="h-4 w-4 mr-1" />
+          <Upload className="h-3 w-3 mr-1" />
           Upload
         </Button>
         <Button
@@ -126,7 +134,7 @@ const ImageUploadField = ({ value, onChange, placeholder = "Enter image URL or u
           onClick={() => setShowUrlInput(true)}
           className="flex-1"
         >
-          <Link className="h-4 w-4 mr-1" />
+          <Link className="h-3 w-3 mr-1" />
           URL
         </Button>
       </div>
@@ -143,19 +151,19 @@ const ImageUploadField = ({ value, onChange, placeholder = "Enter image URL or u
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full text-sm"
             disabled={isUploading}
             onClick={() => fileInputRef.current?.click()}
           >
             {isUploading ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
+              <><Loader2 className="h-3 w-3 mr-2 animate-spin" />Uploading...</>
             ) : (
-              <><Upload className="h-4 w-4 mr-2" />Choose Image</>
+              <><Upload className="h-3 w-3 mr-2" />Choose Image</>
             )}
           </Button>
         </div>
       ) : (
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="text-sm" />
       )}
     </div>
   );
@@ -207,7 +215,7 @@ const ScreenshotUploadField = ({ screenshots, onAdd, onRemove }: {
         <div className="flex flex-wrap gap-2">
           {screenshots.map((screenshot, index) => (
             <div key={index} className="relative group">
-              <img src={screenshot} alt={`Screenshot ${index + 1}`} className="w-16 h-16 object-cover rounded border border-border" />
+              <img src={screenshot} alt={`Screenshot ${index + 1}`} className="w-14 h-14 object-cover rounded border border-border" />
               <button
                 onClick={() => onRemove(index)}
                 className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -219,57 +227,24 @@ const ScreenshotUploadField = ({ screenshots, onAdd, onRemove }: {
         </div>
       )}
       <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={!showUrlInput ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowUrlInput(false)}
-          className="flex-1"
-        >
-          <Upload className="h-4 w-4 mr-1" />
-          Upload
+        <Button type="button" variant={!showUrlInput ? "default" : "outline"} size="sm" onClick={() => setShowUrlInput(false)} className="flex-1">
+          <Upload className="h-3 w-3 mr-1" />Upload
         </Button>
-        <Button
-          type="button"
-          variant={showUrlInput ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowUrlInput(true)}
-          className="flex-1"
-        >
-          <Link className="h-4 w-4 mr-1" />
-          URL
+        <Button type="button" variant={showUrlInput ? "default" : "outline"} size="sm" onClick={() => setShowUrlInput(true)} className="flex-1">
+          <Link className="h-3 w-3 mr-1" />URL
         </Button>
       </div>
       {!showUrlInput ? (
         <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="hidden"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={isUploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {isUploading ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
-            ) : (
-              <><Plus className="h-4 w-4 mr-2" />Add Screenshot</>
-            )}
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} className="hidden" />
+          <Button type="button" variant="outline" className="w-full text-sm" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            {isUploading ? <><Loader2 className="h-3 w-3 mr-2 animate-spin" />Uploading...</> : <><Plus className="h-3 w-3 mr-2" />Add Screenshot</>}
           </Button>
         </div>
       ) : (
         <div className="flex gap-2">
-          <Input value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://example.com/screenshot.jpg" />
-          <Button type="button" onClick={handleAddUrl} variant="outline">
-            <Plus className="h-4 w-4" />
-          </Button>
+          <Input value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." className="text-sm" />
+          <Button type="button" onClick={handleAddUrl} variant="outline" size="icon"><Plus className="h-3 w-3" /></Button>
         </div>
       )}
     </div>
@@ -286,6 +261,7 @@ const Admin = () => {
   const [heroSlides, setHeroSlides] = useState<SliderImage[]>([]);
   const [bestSelling, setBestSelling] = useState<BestSellingItem[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent>({});
+  const [supportChannels, setSupportChannels] = useState<SupportChannels>({});
   const [allUsers, setAllUsers] = useState<UserData[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -306,6 +282,7 @@ const Admin = () => {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isFreeResource, setIsFreeResource] = useState(false);
+  const [allowCustomization, setAllowCustomization] = useState(false);
 
   // Slide form state
   const [showSlideForm, setShowSlideForm] = useState(false);
@@ -326,6 +303,21 @@ const Admin = () => {
   // Calculate real stats
   const totalUsers = allUsers.length;
   const totalRevenue = allPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  // Calculate user stats
+  const userStats: UserStats[] = allUsers.map(u => {
+    const userPurchases = allPurchases.filter(p => p.userId === u.id);
+    return {
+      email: u.email,
+      totalPurchases: userPurchases.length,
+      totalSpent: userPurchases.reduce((sum, p) => sum + (p.amount || 0), 0),
+      products: userPurchases.map(p => ({
+        title: p.productTitle || p.productId,
+        amount: p.amount || 0,
+        date: p.purchaseDate,
+      })),
+    };
+  }).filter(s => s.totalPurchases > 0).sort((a, b) => b.totalSpent - a.totalSpent);
 
   // Redirect non-admin users
   useEffect(() => {
@@ -350,34 +342,25 @@ const Admin = () => {
     const slidesRef = ref(database, 'heroSlides');
     const bestSellingRef = ref(database, 'bestSelling');
     const siteContentRef = ref(database, 'siteContent');
+    const supportRef = ref(database, 'supportChannels');
     const messagesRef = ref(database, 'contactMessages');
     const couponsRef = ref(database, 'coupons');
 
     const unsubscribePurchases = onValue(purchasesRef, (snapshot) => {
       const data = snapshot.val();
-      const list: Purchase[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: Purchase[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setAllPurchases(list);
     });
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
-      const usersList: UserData[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const usersList: UserData[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setAllUsers(usersList);
     });
 
     const unsubscribeCourses = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
-      const coursesList: Product[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({
-            ...value,
-            id,
-            type: 'course' as const,
-          }))
-        : [];
+      const coursesList: Product[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id, type: 'course' as const })) : [];
       setProducts((prev) => {
         const websites = prev.filter(p => p.type === 'website');
         return [...coursesList, ...websites];
@@ -386,13 +369,7 @@ const Admin = () => {
 
     const unsubscribeWebsites = onValue(websitesRef, (snapshot) => {
       const data = snapshot.val();
-      const websitesList: Product[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({
-            ...value,
-            id,
-            type: 'website' as const,
-          }))
-        : [];
+      const websitesList: Product[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id, type: 'website' as const })) : [];
       setProducts((prev) => {
         const courses = prev.filter(p => p.type === 'course');
         return [...courses, ...websitesList];
@@ -401,56 +378,47 @@ const Admin = () => {
 
     const unsubscribeProjects = onValue(projectsRef, (snapshot) => {
       const data = snapshot.val();
-      const list: CustomProject[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: CustomProject[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setCustomProjects(list);
     });
 
     const unsubscribeTestimonials = onValue(testimonialsRef, (snapshot) => {
       const data = snapshot.val();
-      const list: Testimonial[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: Testimonial[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setTestimonials(list);
     });
 
     const unsubscribeSlides = onValue(slidesRef, (snapshot) => {
       const data = snapshot.val();
-      const list: SliderImage[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: SliderImage[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setHeroSlides(list.sort((a, b) => a.order - b.order));
     });
 
     const unsubscribeBestSelling = onValue(bestSellingRef, (snapshot) => {
       const data = snapshot.val();
-      const list: BestSellingItem[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: BestSellingItem[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setBestSelling(list.sort((a, b) => a.order - b.order));
     });
 
     const unsubscribeSiteContent = onValue(siteContentRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setSiteContent(data);
-      }
+      if (data) setSiteContent(data);
+    });
+
+    const unsubscribeSupport = onValue(supportRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) setSupportChannels(data);
     });
 
     const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
-      const list: ContactMessage[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: ContactMessage[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setContactMessages(list.sort((a, b) => b.createdAt - a.createdAt));
     });
 
     const unsubscribeCoupons = onValue(couponsRef, (snapshot) => {
       const data = snapshot.val();
-      const list: Coupon[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id }))
-        : [];
+      const list: Coupon[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setCoupons(list.sort((a, b) => b.createdAt - a.createdAt));
     });
 
@@ -464,6 +432,7 @@ const Admin = () => {
       unsubscribeSlides();
       unsubscribeBestSelling();
       unsubscribeSiteContent();
+      unsubscribeSupport();
       unsubscribeMessages();
       unsubscribeCoupons();
     };
@@ -481,6 +450,7 @@ const Admin = () => {
     setScreenshots([]);
     setYoutubeUrl('');
     setIsFreeResource(false);
+    setAllowCustomization(false);
     setEditingProduct(null);
   };
 
@@ -504,6 +474,7 @@ const Admin = () => {
       screenshots: screenshots.length > 0 ? screenshots : null,
       youtubeUrl: youtubeUrl || null,
       isFreeResource: priceNum === 0 ? isFreeResource : false,
+      allowCustomization,
       createdAt: Date.now(),
     };
 
@@ -526,7 +497,6 @@ const Admin = () => {
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-
     const dbPath = product.type === 'course' ? 'courses' : 'websites';
     try {
       await remove(ref(database, `${dbPath}/${product.id}`));
@@ -550,6 +520,7 @@ const Admin = () => {
     setScreenshots(product.screenshots || []);
     setYoutubeUrl(product.youtubeUrl || '');
     setIsFreeResource(product.isFreeResource || false);
+    setAllowCustomization(product.allowCustomization || false);
     setShowProductForm(true);
   };
 
@@ -562,13 +533,11 @@ const Admin = () => {
     }
   };
 
-  // Slide functions
   const handleAddSlide = async () => {
     if (!slideImageUrl) {
       toast.error('Please enter an image URL');
       return;
     }
-
     try {
       await push(ref(database, 'heroSlides'), {
         imageUrl: slideImageUrl,
@@ -601,12 +570,9 @@ const Admin = () => {
     }
   };
 
-  // Testimonial functions
   const handleToggleTestimonialApproval = async (testimonial: Testimonial) => {
     try {
-      await update(ref(database, `testimonials/${testimonial.id}`), { 
-        approved: !testimonial.approved 
-      });
+      await update(ref(database, `testimonials/${testimonial.id}`), { approved: !testimonial.approved });
       toast.success(testimonial.approved ? 'Testimonial hidden' : 'Testimonial approved!');
     } catch (error) {
       toast.error('Failed to update testimonial');
@@ -623,19 +589,14 @@ const Admin = () => {
     }
   };
 
-  // Best selling functions
   const handleToggleBestSelling = async (productId: string) => {
     const existing = bestSelling.find(b => b.productId === productId);
-    
     try {
       if (existing) {
         await remove(ref(database, `bestSelling/${existing.id}`));
         toast.success('Removed from best selling');
       } else {
-        await push(ref(database, 'bestSelling'), {
-          productId,
-          order: bestSelling.length + 1,
-        });
+        await push(ref(database, 'bestSelling'), { productId, order: bestSelling.length + 1 });
         toast.success('Added to best selling!');
       }
     } catch (error) {
@@ -643,7 +604,6 @@ const Admin = () => {
     }
   };
 
-  // Contact message functions
   const handleToggleMessageRead = async (messageId: string, currentRead: boolean) => {
     try {
       await update(ref(database, `contactMessages/${messageId}`), { read: !currentRead });
@@ -663,13 +623,11 @@ const Admin = () => {
     }
   };
 
-  // Coupon functions
   const handleAddCoupon = async () => {
     if (!couponCode || !couponDiscount || !couponMaxUses) {
       toast.error('Please fill all required fields');
       return;
     }
-
     try {
       await push(ref(database, 'coupons'), {
         code: couponCode.toUpperCase().trim(),
@@ -711,6 +669,15 @@ const Admin = () => {
     }
   };
 
+  const handleSaveSupportChannels = async () => {
+    try {
+      await update(ref(database, 'supportChannels'), supportChannels);
+      toast.success('Support channels saved!');
+    } catch (error) {
+      toast.error('Failed to save');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -729,630 +696,277 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Site
+        <div className="container mx-auto px-3 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-3">
-              <img src={zexofileLogo} alt="ZexoFile" className="h-10 w-10 object-contain" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Admin Panel
-                </h1>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </div>
+            <img src={zexofileLogo} alt="ZexoFile" className="h-8 w-8 object-contain" />
+            <div className="hidden sm:block">
+              <h1 className="text-sm font-bold text-foreground flex items-center gap-1">
+                <Shield className="h-4 w-4 text-primary" />
+                Admin Panel
+              </h1>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Logout</span>
           </Button>
         </div>
       </header>
 
       {/* Stats */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <Users className="h-5 w-5 text-blue-500" />
+      <div className="container mx-auto px-3 py-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-blue-500/20 rounded-lg">
+                <Users className="h-4 w-4 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
+                <p className="text-xs text-muted-foreground">Users</p>
+                <p className="text-lg font-bold text-foreground">{totalUsers}</p>
               </div>
             </div>
           </div>
-          <div className="p-4 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <DollarSign className="h-5 w-5 text-green-500" />
+          <div className="p-3 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-green-500/20 rounded-lg">
+                <DollarSign className="h-4 w-4 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Revenue</p>
+                <p className="text-lg font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
               </div>
             </div>
           </div>
-          <div className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <Package className="h-5 w-5 text-purple-500" />
+          <div className="p-3 bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-purple-500/20 rounded-lg">
+                <Package className="h-4 w-4 text-purple-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Products</p>
-                <p className="text-2xl font-bold text-foreground">{products.length}</p>
+                <p className="text-xs text-muted-foreground">Products</p>
+                <p className="text-lg font-bold text-foreground">{products.length}</p>
               </div>
             </div>
           </div>
-          <div className="p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/20 rounded-lg">
-                <FileText className="h-5 w-5 text-orange-500" />
+          <div className="p-3 bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-orange-500/20 rounded-lg">
+                <ShoppingBag className="h-4 w-4 text-orange-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Orders</p>
-                <p className="text-2xl font-bold text-foreground">{allPurchases.length}</p>
+                <p className="text-xs text-muted-foreground">Orders</p>
+                <p className="text-lg font-bold text-foreground">{allPurchases.length}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="slides" className="w-full">
-          <TabsList className="flex flex-wrap w-full gap-1 h-auto p-1 mb-6">
-            <TabsTrigger value="slides" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <Image className="h-4 w-4" />
-              <span className="hidden sm:inline">Slides</span>
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList className="flex flex-wrap w-full gap-1 h-auto p-1 mb-4 overflow-x-auto">
+            <TabsTrigger value="products" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Package className="h-3 w-3" />
+              <span className="hidden xs:inline">Products</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Products</span>
+            <TabsTrigger value="users" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Users className="h-3 w-3" />
+              <span className="hidden xs:inline">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="messages" className="flex items-center gap-1 flex-1 min-w-[80px] relative">
-              <Mail className="h-4 w-4" />
-              <span className="hidden sm:inline">Messages</span>
+            <TabsTrigger value="slides" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Image className="h-3 w-3" />
+              <span className="hidden xs:inline">Slides</span>
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="flex items-center gap-1 text-xs px-2 py-1.5 relative">
+              <Mail className="h-3 w-3" />
+              <span className="hidden xs:inline">Messages</span>
               {contactMessages.filter(m => !m.read).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
                   {contactMessages.filter(m => !m.read).length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="coupons" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <Ticket className="h-4 w-4" />
-              <span className="hidden sm:inline">Coupons</span>
+            <TabsTrigger value="coupons" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Ticket className="h-3 w-3" />
+              <span className="hidden xs:inline">Coupons</span>
             </TabsTrigger>
-            <TabsTrigger value="testimonials" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <Star className="h-4 w-4" />
-              <span className="hidden sm:inline">Reviews</span>
+            <TabsTrigger value="reviews" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Star className="h-3 w-3" />
+              <span className="hidden xs:inline">Reviews</span>
             </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Projects</span>
+            <TabsTrigger value="projects" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <FileText className="h-3 w-3" />
+              <span className="hidden xs:inline">Projects</span>
             </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Content</span>
+            <TabsTrigger value="support" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Send className="h-3 w-3" />
+              <span className="hidden xs:inline">Support</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-1 flex-1 min-w-[80px]">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
+            <TabsTrigger value="settings" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Settings className="h-3 w-3" />
+              <span className="hidden xs:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
-
-          {/* Hero Slides Tab */}
-          <TabsContent value="slides" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Hero Slider Images</h3>
-              <Button size="sm" onClick={() => setShowSlideForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Slide
-              </Button>
-            </div>
-
-            {showSlideForm && (
-              <div className="border border-border rounded-xl p-6 space-y-4 bg-card">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">New Slide</h4>
-                  <Button variant="ghost" size="sm" onClick={() => setShowSlideForm(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Image className="h-4 w-4" />
-                      Slide Image (16:9 aspect ratio)*
-                    </Label>
-                    <ImageUploadField
-                      value={slideImageUrl}
-                      onChange={setSlideImageUrl}
-                      placeholder="https://example.com/image.jpg"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Title (optional)</Label>
-                    <Input
-                      value={slideTitle}
-                      onChange={(e) => setSlideTitle(e.target.value)}
-                      placeholder="Slide title"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Order</Label>
-                    <Input
-                      type="number"
-                      value={slideOrder}
-                      onChange={(e) => setSlideOrder(e.target.value)}
-                      min="1"
-                    />
-                  </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Subtitle (optional)</Label>
-                    <Input
-                      value={slideSubtitle}
-                      onChange={(e) => setSlideSubtitle(e.target.value)}
-                      placeholder="Slide subtitle"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Button Text (e.g., "Play Now")</Label>
-                    <Input
-                      value={slideButtonText}
-                      onChange={(e) => setSlideButtonText(e.target.value)}
-                      placeholder="Play Now"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Button Link</Label>
-                    <Input
-                      value={slideButtonLink}
-                      onChange={(e) => setSlideButtonLink(e.target.value)}
-                      placeholder="https://example.com or /shop"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleAddSlide} className="w-full">Add Slide</Button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {heroSlides.map((slide) => (
-                <div key={slide.id} className="relative group rounded-xl overflow-hidden border border-border">
-                  <img
-                    src={slide.imageUrl}
-                    alt={slide.title || 'Slide'}
-                    className="w-full aspect-video object-cover"
-                  />
-                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteSlide(slide.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-background to-transparent">
-                    <p className="text-xs font-medium text-foreground">
-                      Order: {slide.order} {slide.title && `• ${slide.title}`}
-                    </p>
-                    {slide.buttonText && (
-                      <p className="text-xs text-muted-foreground">Button: {slide.buttonText}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {heroSlides.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No slides yet. Add your first slide!
-              </p>
-            )}
-          </TabsContent>
 
           {/* Products Tab */}
           <TabsContent value="products" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Manage Products</h3>
-              <Button
-                size="sm"
-                onClick={() => {
-                  resetForm();
-                  setShowProductForm(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
+              <h3 className="font-semibold">Products</h3>
+              <Button size="sm" onClick={() => { resetForm(); setShowProductForm(true); }}>
+                <Plus className="h-4 w-4 mr-1" />Add
               </Button>
             </div>
 
             {showProductForm && (
-              <div className="border border-border rounded-xl p-6 space-y-4 bg-card">
+              <div className="border border-border rounded-xl p-4 space-y-4 bg-card">
                 <div className="flex justify-between items-center">
-                  <h4 className="font-medium">
-                    {editingProduct ? 'Edit Product' : 'New Product'}
-                  </h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowProductForm(false);
-                      resetForm();
-                    }}
-                  >
+                  <h4 className="font-medium text-sm">{editingProduct ? 'Edit Product' : 'New Product'}</h4>
+                  <Button variant="ghost" size="sm" onClick={() => { resetForm(); setShowProductForm(false); }}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Type</Label>
-                    <Select
-                      value={productType}
-                      onValueChange={(v) => setProductType(v as 'course' | 'website')}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Type *</Label>
+                    <Select value={productType} onValueChange={(v) => setProductType(v as 'course' | 'website')}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="course">Course</SelectItem>
                         <SelectItem value="website">Website</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Title *</Label>
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                  <div className="space-y-1">
+                    <Label className="text-xs">Title *</Label>
+                    <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 text-sm" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>MRP / Original Price</Label>
-                    <Input
-                      type="number"
-                      value={originalPrice}
-                      onChange={(e) => setOriginalPrice(e.target.value)}
-                      placeholder="e.g., 150000"
-                    />
+                  <div className="space-y-1">
+                    <Label className="text-xs">MRP</Label>
+                    <Input type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} className="h-9 text-sm" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Selling Price *</Label>
-                    <Input
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="e.g., 109999"
-                    />
+                  <div className="space-y-1">
+                    <Label className="text-xs">Selling Price *</Label>
+                    <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="h-9 text-sm" />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Image className="h-4 w-4" />
-                      Main Image *
-                    </Label>
-                    <ImageUploadField
-                      value={image}
-                      onChange={setImage}
-                      placeholder="https://example.com/image.jpg"
-                    />
+                  <div className="col-span-full space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3" />Main Image *</Label>
+                    <ImageUploadField value={image} onChange={setImage} />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Images className="h-4 w-4" />
-                      Screenshots
-                    </Label>
-                    <ScreenshotUploadField
-                      screenshots={screenshots}
-                      onAdd={(url) => setScreenshots([...screenshots, url])}
-                      onRemove={(index) => setScreenshots(screenshots.filter((_, i) => i !== index))}
-                    />
+                  <div className="col-span-full space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Images className="h-3 w-3" />Screenshots</Label>
+                    <ScreenshotUploadField screenshots={screenshots} onAdd={(url) => setScreenshots([...screenshots, url])} onRemove={(i) => setScreenshots(screenshots.filter((_, idx) => idx !== i))} />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Youtube className="h-4 w-4 text-red-500" />
-                      YouTube Video URL
-                    </Label>
-                    <Input 
-                      value={youtubeUrl} 
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                    />
+                  <div className="col-span-full space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Youtube className="h-3 w-3 text-red-500" />YouTube URL</Label>
+                    <Input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="h-9 text-sm" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Preview Link</Label>
-                    <Input
-                      value={previewLink}
-                      onChange={(e) => setPreviewLink(e.target.value)}
-                    />
+                  <div className="space-y-1">
+                    <Label className="text-xs">Preview Link</Label>
+                    <Input value={previewLink} onChange={(e) => setPreviewLink(e.target.value)} className="h-9 text-sm" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Delivery Link (after purchase)</Label>
-                    <Input
-                      value={razorpayLink}
-                      onChange={(e) => setRazorpayLink(e.target.value)}
-                      placeholder="Product access link"
-                    />
+                  <div className="space-y-1">
+                    <Label className="text-xs">Delivery Link</Label>
+                    <Input value={razorpayLink} onChange={(e) => setRazorpayLink(e.target.value)} className="h-9 text-sm" />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Description *</Label>
-                    <Textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                    />
+                  <div className="col-span-full space-y-1">
+                    <Label className="text-xs">Description *</Label>
+                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="text-sm" />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Detailed Content (HTML supported)</Label>
-                    <Textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={4}
-                    />
+                  <div className="col-span-full space-y-1">
+                    <Label className="text-xs">Content</Label>
+                    <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={3} className="text-sm" />
                   </div>
                   
-                  {/* Free Resource Toggle - Only show for price 0 */}
-                  {parseFloat(price) === 0 && (
-                    <div className="col-span-2 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-green-700 dark:text-green-400 font-medium">Mark as Free Resource</Label>
-                          <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                            Free resources can be accessed directly without payment
-                          </p>
-                        </div>
-                        <Switch
-                          checked={isFreeResource}
-                          onCheckedChange={setIsFreeResource}
-                        />
+                  {/* Toggles */}
+                  <div className="col-span-full flex flex-wrap gap-4">
+                    {parseFloat(price) === 0 && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <Switch checked={isFreeResource} onCheckedChange={setIsFreeResource} />
+                        <Label className="text-xs text-green-700 dark:text-green-400">Free Resource</Label>
                       </div>
+                    )}
+                    <div className="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <Switch checked={allowCustomization} onCheckedChange={setAllowCustomization} />
+                      <Label className="text-xs text-purple-700 dark:text-purple-400">Allow Customization</Label>
                     </div>
-                  )}
+                  </div>
                 </div>
-                <Button onClick={handleSaveProduct} className="w-full">
-                  {editingProduct ? 'Update Product' : 'Add Product'}
-                </Button>
+                <Button onClick={handleSaveProduct} className="w-full">{editingProduct ? 'Update' : 'Add'} Product</Button>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {products.map((product) => (
                 <div key={product.id} className="bg-card border border-border rounded-xl overflow-hidden">
                   <div className="relative">
-                    <img src={product.image} alt={product.title} className="w-full h-40 object-cover" />
-                    <span className={`absolute top-2 left-2 px-2 py-0.5 text-xs rounded-full ${
-                      product.type === 'course' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
-                    }`}>
+                    <img src={product.image} alt={product.title} className="w-full h-32 object-contain bg-secondary/30" />
+                    <Badge className={`absolute top-2 left-2 text-xs ${product.type === 'course' ? 'bg-blue-500' : 'bg-purple-500'}`}>
                       {product.type}
-                    </span>
+                    </Badge>
                     <Switch
                       checked={bestSelling.some(b => b.productId === product.id)}
                       onCheckedChange={() => handleToggleBestSelling(product.id)}
                       className="absolute top-2 right-2"
                     />
                   </div>
-                  <div className="p-4">
-                    <h4 className="font-medium truncate">{product.title}</h4>
-                    <p className="text-sm text-muted-foreground truncate">{product.description}</p>
-                    <div className="flex items-center gap-2 mt-2">
+                  <div className="p-3">
+                    <h4 className="font-medium text-sm truncate">{product.title}</h4>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {product.price === 0 && product.isFreeResource ? (
-                        <span className="font-bold text-green-600">FREE</span>
+                        <span className="font-bold text-sm text-green-600">FREE</span>
                       ) : (
-                        <>
-                          <span className="font-bold text-primary">₹{product.price}</span>
-                          {product.originalPrice && (
-                            <span className="text-sm text-muted-foreground line-through">₹{product.originalPrice}</span>
-                          )}
-                        </>
+                        <span className="font-bold text-sm text-primary">₹{product.price}</span>
                       )}
-                      {product.isFreeResource && (
-                        <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Free Resource</span>
+                      {product.allowCustomization && (
+                        <Badge variant="outline" className="text-[10px]">Customizable</Badge>
                       )}
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEditProduct(product)}>
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
+                    <div className="flex gap-2 mt-2">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={() => handleEditProduct(product)}>
+                        <Edit className="h-3 w-3 mr-1" />Edit
                       </Button>
-                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDeleteProduct(product)}>
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
+                      <Button size="sm" variant="destructive" className="flex-1 text-xs h-8" onClick={() => handleDeleteProduct(product)}>
+                        <Trash2 className="h-3 w-3 mr-1" />Delete
                       </Button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            {products.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No products yet. Add your first product!
-              </p>
-            )}
+            {products.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No products yet</p>}
           </TabsContent>
 
-          {/* Messages Tab */}
-          <TabsContent value="messages" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Contact Messages</h3>
-              <p className="text-sm text-muted-foreground">
-                {contactMessages.filter(m => !m.read).length} unread
-              </p>
-            </div>
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-4">
+            <h3 className="font-semibold">User Purchase Statistics</h3>
             <div className="space-y-3">
-              {contactMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-4 bg-card border rounded-xl space-y-2 ${
-                    message.read ? 'border-border' : 'border-primary/50 bg-primary/5'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{message.name}</p>
-                      <p className="text-xs text-muted-foreground">{message.email}</p>
-                      {message.phone && (
-                        <p className="text-xs text-muted-foreground">{message.phone}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(message.createdAt).toLocaleDateString()}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleMessageRead(message.id, message.read)}
-                        title={message.read ? 'Mark as unread' : 'Mark as read'}
-                      >
-                        {message.read ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-primary" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteMessage(message.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.message}</p>
-                </div>
-              ))}
-            </div>
-            {contactMessages.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No messages yet.
-              </p>
-            )}
-          </TabsContent>
-
-          {/* Coupons Tab */}
-          <TabsContent value="coupons" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Manage Coupons</h3>
-              <Button size="sm" onClick={() => setShowCouponForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Coupon
-              </Button>
-            </div>
-
-            {showCouponForm && (
-              <div className="border border-border rounded-xl p-6 space-y-4 bg-card">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">New Coupon</h4>
-                  <Button variant="ghost" size="sm" onClick={() => setShowCouponForm(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Coupon Code *</Label>
-                    <Input
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      placeholder="e.g., SAVE20"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Discount Percent *</Label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        value={couponDiscount}
-                        onChange={(e) => setCouponDiscount(e.target.value)}
-                        placeholder="e.g., 20"
-                        min="1"
-                        max="100"
-                      />
-                      <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Minimum Order Value</Label>
-                    <Input
-                      type="number"
-                      value={couponMinOrder}
-                      onChange={(e) => setCouponMinOrder(e.target.value)}
-                      placeholder="e.g., 500 (0 for no min)"
-                      min="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Max Uses *</Label>
-                    <Input
-                      type="number"
-                      value={couponMaxUses}
-                      onChange={(e) => setCouponMaxUses(e.target.value)}
-                      placeholder="e.g., 100"
-                      min="1"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleAddCoupon} className="w-full">Create Coupon</Button>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {coupons.map((coupon) => (
-                <div
-                  key={coupon.id}
-                  className={`p-4 bg-card border rounded-xl ${
-                    coupon.active ? 'border-green-500/30' : 'border-border opacity-60'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-lg text-primary">{coupon.code}</span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${
-                          coupon.active 
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                            : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-                        }`}>
-                          {coupon.active ? 'Active' : 'Inactive'}
-                        </span>
+              {userStats.map((stats, idx) => (
+                <div key={idx} className="p-4 bg-card border border-border rounded-xl">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{coupon.discountPercent}% OFF</span>
-                        {coupon.minOrderValue > 0 && (
-                          <span>Min: ₹{coupon.minOrderValue}</span>
-                        )}
-                        <span>Used: {coupon.usedCount}/{coupon.maxUses}</span>
+                      <div>
+                        <p className="font-medium text-sm">{stats.email}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <span>{stats.totalPurchases} purchases</span>
+                          <span className="font-semibold text-green-600">₹{stats.totalSpent.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={coupon.active}
-                        onCheckedChange={() => handleToggleCouponActive(coupon.id, coupon.active)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteCoupon(coupon.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
                   </div>
-                  
-                  {/* Users who used this coupon */}
-                  {coupon.usedBy && Object.keys(coupon.usedBy).length > 0 && (
+                  {stats.products.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Used by:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Products purchased:</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(coupon.usedBy).map(([userId, usage]) => (
-                          <span 
-                            key={userId} 
-                            className="px-2 py-1 text-xs bg-secondary rounded-full"
-                            title={new Date(usage.usedAt).toLocaleString()}
-                          >
-                            {usage.email}
+                        {stats.products.map((p, i) => (
+                          <span key={i} className="px-2 py-1 text-xs bg-secondary rounded-full">
+                            {p.title} (₹{p.amount})
                           </span>
                         ))}
                       </div>
@@ -1361,89 +975,212 @@ const Admin = () => {
                 </div>
               ))}
             </div>
-            {coupons.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No coupons yet. Create your first coupon!
-              </p>
-            )}
+            {userStats.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No purchases yet</p>}
           </TabsContent>
 
-          {/* Testimonials Tab */}
-          <TabsContent value="testimonials" className="space-y-4">
-            <h3 className="font-semibold text-lg">Manage Testimonials</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {testimonials.map((testimonial) => (
-                <div
-                  key={testimonial.id}
-                  className="p-4 bg-card border border-border rounded-xl space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{testimonial.name}</p>
-                      <div className="flex gap-0.5">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-3 w-3 ${
-                              i < testimonial.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Switch
-                          checked={testimonial.approved}
-                          onCheckedChange={() => handleToggleTestimonialApproval(testimonial)}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {testimonial.approved ? 'Visible' : 'Hidden'}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteTestimonial(testimonial.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+          {/* Slides Tab */}
+          <TabsContent value="slides" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Hero Slides</h3>
+              <Button size="sm" onClick={() => setShowSlideForm(true)}><Plus className="h-4 w-4 mr-1" />Add</Button>
+            </div>
+            {showSlideForm && (
+              <div className="border border-border rounded-xl p-4 space-y-3 bg-card">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-sm">New Slide</h4>
+                  <Button variant="ghost" size="sm" onClick={() => setShowSlideForm(false)}><X className="h-4 w-4" /></Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs">Image *</Label>
+                    <ImageUploadField value={slideImageUrl} onChange={setSlideImageUrl} />
                   </div>
-                  <p className="text-sm text-muted-foreground">{testimonial.message}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Title</Label>
+                    <Input value={slideTitle} onChange={(e) => setSlideTitle(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Order</Label>
+                    <Input type="number" value={slideOrder} onChange={(e) => setSlideOrder(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs">Subtitle</Label>
+                    <Input value={slideSubtitle} onChange={(e) => setSlideSubtitle(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Button Text</Label>
+                    <Input value={slideButtonText} onChange={(e) => setSlideButtonText(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Button Link</Label>
+                    <Input value={slideButtonLink} onChange={(e) => setSlideButtonLink(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <Button onClick={handleAddSlide} className="w-full">Add Slide</Button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {heroSlides.map((slide) => (
+                <div key={slide.id} className="relative group rounded-xl overflow-hidden border border-border">
+                  <img src={slide.imageUrl} alt={slide.title || 'Slide'} className="w-full aspect-video object-cover" />
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteSlide(slide.id)}>
+                      <Trash2 className="h-4 w-4 mr-1" />Delete
+                    </Button>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-background to-transparent">
+                    <p className="text-xs text-foreground">Order: {slide.order} {slide.title && `• ${slide.title}`}</p>
+                  </div>
                 </div>
               ))}
             </div>
-            {testimonials.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No testimonials yet.
-              </p>
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Contact Messages</h3>
+              <p className="text-xs text-muted-foreground">{contactMessages.filter(m => !m.read).length} unread</p>
+            </div>
+            <div className="space-y-3">
+              {contactMessages.map((message) => (
+                <div key={message.id} className={`p-3 bg-card border rounded-xl ${message.read ? 'border-border' : 'border-primary/50 bg-primary/5'}`}>
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{message.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{message.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">{new Date(message.createdAt).toLocaleDateString()}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleMessageRead(message.id, message.read)}>
+                        {message.read ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3 text-primary" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteMessage(message.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{message.message}</p>
+                </div>
+              ))}
+            </div>
+            {contactMessages.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No messages</p>}
+          </TabsContent>
+
+          {/* Coupons Tab */}
+          <TabsContent value="coupons" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Coupons</h3>
+              <Button size="sm" onClick={() => setShowCouponForm(true)}><Plus className="h-4 w-4 mr-1" />Create</Button>
+            </div>
+            {showCouponForm && (
+              <div className="border border-border rounded-xl p-4 space-y-3 bg-card">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-sm">New Coupon</h4>
+                  <Button variant="ghost" size="sm" onClick={() => setShowCouponForm(false)}><X className="h-4 w-4" /></Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Code *</Label>
+                    <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Discount % *</Label>
+                    <div className="relative">
+                      <Input type="number" value={couponDiscount} onChange={(e) => setCouponDiscount(e.target.value)} className="h-9 text-sm pr-8" />
+                      <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Min Order</Label>
+                    <Input type="number" value={couponMinOrder} onChange={(e) => setCouponMinOrder(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Max Uses *</Label>
+                    <Input type="number" value={couponMaxUses} onChange={(e) => setCouponMaxUses(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <Button onClick={handleAddCoupon} className="w-full">Create Coupon</Button>
+              </div>
             )}
+            <div className="space-y-3">
+              {coupons.map((coupon) => (
+                <div key={coupon.id} className={`p-3 bg-card border rounded-xl ${coupon.active ? 'border-green-500/30' : 'border-border opacity-60'}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-primary">{coupon.code}</span>
+                        <Badge variant="outline" className={`text-[10px] ${coupon.active ? 'border-green-500 text-green-600' : ''}`}>
+                          {coupon.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span>{coupon.discountPercent}% OFF</span>
+                        {coupon.minOrderValue > 0 && <span>Min: ₹{coupon.minOrderValue}</span>}
+                        <span>Used: {coupon.usedCount}/{coupon.maxUses}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Switch checked={coupon.active} onCheckedChange={() => handleToggleCouponActive(coupon.id, coupon.active)} />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteCoupon(coupon.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  {coupon.usedBy && Object.keys(coupon.usedBy).length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1">Used by:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(coupon.usedBy).map(([userId, usage]) => (
+                          <span key={userId} className="px-1.5 py-0.5 text-[10px] bg-secondary rounded">{usage.email}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {coupons.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No coupons</p>}
+          </TabsContent>
+
+          {/* Reviews Tab */}
+          <TabsContent value="reviews" className="space-y-4">
+            <h3 className="font-semibold">Testimonials</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="p-3 bg-card border border-border rounded-xl">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-sm">{testimonial.name}</p>
+                      <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} className={`h-3 w-3 ${i < testimonial.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted'}`} />)}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Switch checked={testimonial.approved} onCheckedChange={() => handleToggleTestimonialApproval(testimonial)} />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteTestimonial(testimonial.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{testimonial.message}</p>
+                </div>
+              ))}
+            </div>
+            {testimonials.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No testimonials</p>}
           </TabsContent>
 
           {/* Projects Tab */}
           <TabsContent value="projects" className="space-y-4">
-            <h3 className="font-semibold text-lg">Custom Project Requests</h3>
+            <h3 className="font-semibold">Custom Projects</h3>
             <div className="space-y-3">
               {customProjects.map((project) => (
-                <div
-                  key={project.id}
-                  className="p-4 bg-card border border-border rounded-xl space-y-2"
-                >
-                  <div className="flex justify-between items-start">
+                <div key={project.id} className="p-3 bg-card border border-border rounded-xl">
+                  <div className="flex justify-between items-start gap-2 flex-wrap">
                     <div>
-                      <p className="font-medium">{project.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {project.userEmail} • {project.type} • Budget: {project.budget}
-                      </p>
+                      <p className="font-medium text-sm">{project.title}</p>
+                      <p className="text-[10px] text-muted-foreground">{project.userEmail} • {project.type} • {project.budget}</p>
                     </div>
-                    <Select
-                      value={project.status}
-                      onValueChange={(v) => handleUpdateProjectStatus(project, v)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={project.status} onValueChange={(v) => handleUpdateProjectStatus(project, v)}>
+                      <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
@@ -1452,162 +1189,92 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <p className="text-sm text-muted-foreground">{project.description}</p>
-                  <p className="text-xs">Contact: {project.contact}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{project.description}</p>
+                  <p className="text-[10px] mt-1">Contact: {project.contact}</p>
                 </div>
               ))}
             </div>
-            {customProjects.length === 0 && (
-              <p className="text-center text-muted-foreground py-12 bg-secondary/30 rounded-xl">
-                No project requests yet.
-              </p>
-            )}
+            {customProjects.length === 0 && <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No projects</p>}
           </TabsContent>
 
-          {/* Site Content Tab */}
-          <TabsContent value="content" className="space-y-4">
-            <h3 className="font-semibold text-lg">Site Content & Policies</h3>
+          {/* Support Tab */}
+          <TabsContent value="support" className="space-y-4">
+            <h3 className="font-semibold">Support Channels</h3>
+            <p className="text-xs text-muted-foreground">Configure support contact options. These will be shown in the footer.</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 p-4 bg-card border border-border rounded-xl">
-                <Label>What We Offer Description</Label>
-                <Textarea
-                  value={siteContent.whatWeOffer || ''}
-                  onChange={(e) => setSiteContent(prev => ({ ...prev, whatWeOffer: e.target.value }))}
-                  placeholder="Describe what you offer..."
-                  rows={3}
-                />
-                <Button size="sm" onClick={() => update(ref(database, 'siteContent'), { whatWeOffer: siteContent.whatWeOffer || '' }).then(() => toast.success('Saved!'))}>
-                  Save
-                </Button>
+            <div className="p-4 bg-card border border-border rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Send className="h-3 w-3 text-blue-500" />Telegram 1</Label>
+                  <Input value={supportChannels.telegram1 || ''} onChange={(e) => setSupportChannels({...supportChannels, telegram1: e.target.value})} placeholder="@username or https://t.me/..." className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Send className="h-3 w-3 text-blue-500" />Telegram 2</Label>
+                  <Input value={supportChannels.telegram2 || ''} onChange={(e) => setSupportChannels({...supportChannels, telegram2: e.target.value})} placeholder="@username or https://t.me/..." className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><MessageSquare className="h-3 w-3 text-green-500" />WhatsApp 1</Label>
+                  <Input value={supportChannels.whatsapp1 || ''} onChange={(e) => setSupportChannels({...supportChannels, whatsapp1: e.target.value})} placeholder="+91XXXXXXXXXX" className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><MessageSquare className="h-3 w-3 text-green-500" />WhatsApp 2</Label>
+                  <Input value={supportChannels.whatsapp2 || ''} onChange={(e) => setSupportChannels({...supportChannels, whatsapp2: e.target.value})} placeholder="+91XXXXXXXXXX" className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" />Phone 1</Label>
+                  <Input value={supportChannels.phone1 || ''} onChange={(e) => setSupportChannels({...supportChannels, phone1: e.target.value})} placeholder="+91XXXXXXXXXX" className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" />Phone 2</Label>
+                  <Input value={supportChannels.phone2 || ''} onChange={(e) => setSupportChannels({...supportChannels, phone2: e.target.value})} placeholder="+91XXXXXXXXXX" className="h-9 text-sm" />
+                </div>
               </div>
-
-              <div className="space-y-2 p-4 bg-card border border-border rounded-xl">
-                <Label>Why Choose Us Description</Label>
-                <Textarea
-                  value={siteContent.whyChooseUs || ''}
-                  onChange={(e) => setSiteContent(prev => ({ ...prev, whyChooseUs: e.target.value }))}
-                  placeholder="Why should customers choose you..."
-                  rows={3}
-                />
-                <Button size="sm" onClick={() => update(ref(database, 'siteContent'), { whyChooseUs: siteContent.whyChooseUs || '' }).then(() => toast.success('Saved!'))}>
-                  Save
-                </Button>
-              </div>
-
-              <div className="space-y-2 p-4 bg-card border border-border rounded-xl">
-                <Label>Privacy Policy</Label>
-                <Textarea
-                  value={siteContent.privacyPolicy || ''}
-                  onChange={(e) => setSiteContent(prev => ({ ...prev, privacyPolicy: e.target.value }))}
-                  placeholder="Your privacy policy..."
-                  rows={5}
-                />
-                <Button size="sm" onClick={() => update(ref(database, 'siteContent'), { privacyPolicy: siteContent.privacyPolicy || '' }).then(() => toast.success('Saved!'))}>
-                  Save
-                </Button>
-              </div>
-
-              <div className="space-y-2 p-4 bg-card border border-border rounded-xl">
-                <Label>Refund Policy</Label>
-                <Textarea
-                  value={siteContent.refundPolicy || ''}
-                  onChange={(e) => setSiteContent(prev => ({ ...prev, refundPolicy: e.target.value }))}
-                  placeholder="Your refund policy..."
-                  rows={5}
-                />
-                <Button size="sm" onClick={() => update(ref(database, 'siteContent'), { refundPolicy: siteContent.refundPolicy || '' }).then(() => toast.success('Saved!'))}>
-                  Save
-                </Button>
-              </div>
+              <Button onClick={handleSaveSupportChannels} className="w-full mt-4">Save Support Channels</Button>
             </div>
           </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
-            <h3 className="font-semibold text-lg">Contact & Social Settings</h3>
-            
-            <div className="p-6 bg-card border border-border rounded-xl">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Contact Email</Label>
-                  <Input
-                    value={siteContent.contactEmail || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, contactEmail: e.target.value }))}
-                    placeholder="your@email.com"
-                  />
+            <h3 className="font-semibold">Site Settings</h3>
+            <div className="p-4 bg-card border border-border rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input value={siteContent.contactEmail || ''} onChange={(e) => setSiteContent({...siteContent, contactEmail: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Contact Phone</Label>
-                  <Input
-                    value={siteContent.contactPhone || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, contactPhone: e.target.value }))}
-                    placeholder="+91 98765 43210"
-                  />
+                <div className="space-y-1">
+                  <Label className="text-xs">Phone</Label>
+                  <Input value={siteContent.contactPhone || ''} onChange={(e) => setSiteContent({...siteContent, contactPhone: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="col-span-2 space-y-2">
-                  <Label>Address</Label>
-                  <Input
-                    value={siteContent.contactAddress || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, contactAddress: e.target.value }))}
-                    placeholder="Your address"
-                  />
+                <div className="col-span-full space-y-1">
+                  <Label className="text-xs">Address</Label>
+                  <Input value={siteContent.contactAddress || ''} onChange={(e) => setSiteContent({...siteContent, contactAddress: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Instagram URL</Label>
-                  <Input
-                    value={siteContent.socialInstagram || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, socialInstagram: e.target.value }))}
-                    placeholder="https://instagram.com/..."
-                  />
+                <div className="space-y-1">
+                  <Label className="text-xs">Instagram</Label>
+                  <Input value={siteContent.socialInstagram || ''} onChange={(e) => setSiteContent({...siteContent, socialInstagram: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Facebook URL</Label>
-                  <Input
-                    value={siteContent.socialFacebook || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, socialFacebook: e.target.value }))}
-                    placeholder="https://facebook.com/..."
-                  />
+                <div className="space-y-1">
+                  <Label className="text-xs">Facebook</Label>
+                  <Input value={siteContent.socialFacebook || ''} onChange={(e) => setSiteContent({...siteContent, socialFacebook: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Twitter URL</Label>
-                  <Input
-                    value={siteContent.socialTwitter || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, socialTwitter: e.target.value }))}
-                    placeholder="https://twitter.com/..."
-                  />
+                <div className="space-y-1">
+                  <Label className="text-xs">Twitter</Label>
+                  <Input value={siteContent.socialTwitter || ''} onChange={(e) => setSiteContent({...siteContent, socialTwitter: e.target.value})} className="h-9 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label>YouTube URL</Label>
-                  <Input
-                    value={siteContent.socialYoutube || ''}
-                    onChange={(e) => setSiteContent(prev => ({ ...prev, socialYoutube: e.target.value }))}
-                    placeholder="https://youtube.com/..."
-                  />
+                <div className="space-y-1">
+                  <Label className="text-xs">YouTube</Label>
+                  <Input value={siteContent.socialYoutube || ''} onChange={(e) => setSiteContent({...siteContent, socialYoutube: e.target.value})} className="h-9 text-sm" />
                 </div>
               </div>
-
-              <Button 
-                className="mt-6 w-full"
-                onClick={async () => {
-                  try {
-                    await update(ref(database, 'siteContent'), {
-                      contactEmail: siteContent.contactEmail || '',
-                      contactPhone: siteContent.contactPhone || '',
-                      contactAddress: siteContent.contactAddress || '',
-                      socialInstagram: siteContent.socialInstagram || '',
-                      socialFacebook: siteContent.socialFacebook || '',
-                      socialTwitter: siteContent.socialTwitter || '',
-                      socialYoutube: siteContent.socialYoutube || '',
-                    });
-                    toast.success('Settings saved!');
-                  } catch (error) {
-                    toast.error('Failed to save settings');
-                  }
-                }}
-              >
-                Save All Settings
-              </Button>
+              <Button className="w-full mt-4" onClick={async () => {
+                try {
+                  await update(ref(database, 'siteContent'), siteContent);
+                  toast.success('Settings saved!');
+                } catch (error) {
+                  toast.error('Failed to save');
+                }
+              }}>Save Settings</Button>
             </div>
           </TabsContent>
         </Tabs>
