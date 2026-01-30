@@ -8,13 +8,27 @@ export interface Product {
   type: 'course' | 'website';
   category?: string;
   previewLink?: string;
-  razorpayLink?: string; // Legacy field - kept for backward compatibility
-  deliveryLink?: string; // Link that user gets after purchase
+  razorpayLink?: string;
+  deliveryLink?: string;
   content?: string;
   screenshots?: string[];
   youtubeUrl?: string;
-  isFreeResource?: boolean; // Products with price 0 can be marked as free
-  allowCustomization?: boolean; // Allow user to customize before purchase
+  isFreeResource?: boolean;
+  allowCustomization?: boolean;
+  // Dual pricing configuration
+  leftButton?: {
+    label?: string;
+    description?: string;
+    price: number;
+    originalPrice?: number;
+  };
+  rightButton?: {
+    label?: string;
+    description?: string;
+    price: number;
+    originalPrice?: number;
+    showForm?: boolean; // Show customization form after payment
+  };
   createdAt: number;
 }
 
@@ -30,7 +44,7 @@ export interface Purchase {
   amount: number;
   razorpayPaymentId?: string;
   deliveryLink?: string;
-  purchaseType?: 'source_code' | 'customized';
+  purchaseType?: 'source_code' | 'customized' | 'left' | 'right';
   customizationData?: CustomizationFormData;
 }
 
@@ -43,6 +57,22 @@ export interface CustomizationFormData {
   photos?: string[];
   videoDriveLink?: string;
   submittedAt: number;
+}
+
+export interface OrderSubmission {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  productId: string;
+  productTitle: string;
+  productImage: string;
+  paymentType: 'left' | 'right';
+  paymentAmount: number;
+  razorpayPaymentId: string;
+  formData?: CustomizationFormData;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  createdAt: number;
 }
 
 export interface CustomProject {

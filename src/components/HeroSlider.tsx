@@ -94,21 +94,22 @@ const HeroSlider = () => {
   };
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-b from-secondary/50 to-background mt-4 md:mt-6">
+    <section className="relative w-full overflow-hidden bg-background mt-4 md:mt-6">
       {/* Main Slider Container */}
       <div className="relative w-full max-w-7xl mx-auto px-2 md:px-4">
         {/* Slides */}
-        <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 shadow-lg">
+        <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 shadow-xl">
           {displaySlides.map((slide, index) => (
             <div
               key={slide.id}
-              className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+              className={`absolute inset-0 transition-transform duration-500 ease-out ${
                 index === currentIndex 
-                  ? 'opacity-100 translate-x-0' 
+                  ? 'translate-x-0' 
                   : index < currentIndex 
-                    ? 'opacity-0 -translate-x-full' 
-                    : 'opacity-0 translate-x-full'
+                    ? '-translate-x-full' 
+                    : 'translate-x-full'
               }`}
+              style={{ visibility: Math.abs(index - currentIndex) <= 1 ? 'visible' : 'hidden' }}
             >
               {/* Image */}
               <img
@@ -117,16 +118,15 @@ const HeroSlider = () => {
                 className="w-full h-full object-cover"
               />
               
-              {/* Subtle Gradient Overlay - Very light */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/30 via-transparent to-transparent" />
+              {/* Very Subtle Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/20 via-transparent to-transparent" />
             </div>
           ))}
         </div>
 
         {/* Content Overlay - Below image on mobile, overlay on desktop */}
         <div className="relative md:absolute md:bottom-0 md:left-0 md:right-0 p-4 md:p-8 bg-background md:bg-transparent">
-          <div className="max-w-2xl animate-fade-in">
+          <div className="max-w-2xl">
             {displaySlides[currentIndex]?.title && (
               <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2 leading-tight">
                 {displaySlides[currentIndex].title}
