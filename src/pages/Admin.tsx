@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ref, onValue, push, set, remove, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product, CustomProject, Purchase, Testimonial, SupportChannels } from '@/types';
+import { Product, CustomProject, Purchase, Testimonial, SupportChannels, OrderSubmission } from '@/types';
 import { Coupon, ContactMessage } from '@/types/coupon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { 
   Trash2, Edit, Plus, X, LogOut, Package, Users, FileText, Settings, Image, Star, 
   MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield,
-  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User
+  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User, ClipboardList
 } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import zexofileLogo from '@/assets/zexofile-logo.png';
@@ -255,6 +256,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { user, isAdmin, logout } = useAuth();
   const [allPurchases, setAllPurchases] = useState<Purchase[]>([]);
+  const [orderSubmissions, setOrderSubmissions] = useState<OrderSubmission[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customProjects, setCustomProjects] = useState<CustomProject[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -283,6 +285,18 @@ const Admin = () => {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isFreeResource, setIsFreeResource] = useState(false);
   const [allowCustomization, setAllowCustomization] = useState(false);
+  
+  // Dual button configuration
+  const [enableDualButtons, setEnableDualButtons] = useState(false);
+  const [leftButtonLabel, setLeftButtonLabel] = useState('Source Code');
+  const [leftButtonDescription, setLeftButtonDescription] = useState('');
+  const [leftButtonPrice, setLeftButtonPrice] = useState('');
+  const [leftButtonOriginalPrice, setLeftButtonOriginalPrice] = useState('');
+  const [rightButtonLabel, setRightButtonLabel] = useState('Get Customized');
+  const [rightButtonDescription, setRightButtonDescription] = useState('');
+  const [rightButtonPrice, setRightButtonPrice] = useState('');
+  const [rightButtonOriginalPrice, setRightButtonOriginalPrice] = useState('');
+  const [rightButtonShowForm, setRightButtonShowForm] = useState(true);
 
   // Slide form state
   const [showSlideForm, setShowSlideForm] = useState(false);
@@ -334,6 +348,7 @@ const Admin = () => {
 
     // Fetch all data
     const purchasesRef = ref(database, 'purchases');
+    const submissionsRef = ref(database, 'orderSubmissions');
     const usersRef = ref(database, 'users');
     const coursesRef = ref(database, 'courses');
     const websitesRef = ref(database, 'websites');
@@ -350,6 +365,12 @@ const Admin = () => {
       const data = snapshot.val();
       const list: Purchase[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
       setAllPurchases(list);
+    });
+
+    const unsubscribeSubmissions = onValue(submissionsRef, (snapshot) => {
+      const data = snapshot.val();
+      const list: OrderSubmission[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
+      setOrderSubmissions(list.sort((a, b) => b.createdAt - a.createdAt));
     });
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
@@ -424,6 +445,7 @@ const Admin = () => {
 
     return () => {
       unsubscribePurchases();
+      unsubscribeSubmissions();
       unsubscribeUsers();
       unsubscribeCourses();
       unsubscribeWebsites();
@@ -452,6 +474,17 @@ const Admin = () => {
     setIsFreeResource(false);
     setAllowCustomization(false);
     setEditingProduct(null);
+    // Reset dual button config
+    setEnableDualButtons(false);
+    setLeftButtonLabel('Source Code');
+    setLeftButtonDescription('');
+    setLeftButtonPrice('');
+    setLeftButtonOriginalPrice('');
+    setRightButtonLabel('Get Customized');
+    setRightButtonDescription('');
+    setRightButtonPrice('');
+    setRightButtonOriginalPrice('');
+    setRightButtonShowForm(true);
   };
 
   const handleSaveProduct = async () => {
@@ -461,7 +494,7 @@ const Admin = () => {
     }
 
     const priceNum = parseFloat(price);
-    const productData = {
+    const productData: any = {
       title,
       description,
       price: priceNum,
@@ -477,6 +510,23 @@ const Admin = () => {
       allowCustomization,
       createdAt: Date.now(),
     };
+
+    // Add dual button configuration if enabled
+    if (enableDualButtons) {
+      productData.leftButton = {
+        label: leftButtonLabel || 'Source Code',
+        description: leftButtonDescription || description,
+        price: leftButtonPrice ? parseFloat(leftButtonPrice) : priceNum,
+        originalPrice: leftButtonOriginalPrice ? parseFloat(leftButtonOriginalPrice) : null,
+      };
+      productData.rightButton = {
+        label: rightButtonLabel || 'Get Customized',
+        description: rightButtonDescription || description,
+        price: rightButtonPrice ? parseFloat(rightButtonPrice) : priceNum,
+        originalPrice: rightButtonOriginalPrice ? parseFloat(rightButtonOriginalPrice) : null,
+        showForm: rightButtonShowForm,
+      };
+    }
 
     const dbPath = productType === 'course' ? 'courses' : 'websites';
 
@@ -521,6 +571,19 @@ const Admin = () => {
     setYoutubeUrl(product.youtubeUrl || '');
     setIsFreeResource(product.isFreeResource || false);
     setAllowCustomization(product.allowCustomization || false);
+    // Load dual button config
+    if (product.leftButton || product.rightButton) {
+      setEnableDualButtons(true);
+      setLeftButtonLabel(product.leftButton?.label || 'Source Code');
+      setLeftButtonDescription(product.leftButton?.description || '');
+      setLeftButtonPrice(product.leftButton?.price?.toString() || '');
+      setLeftButtonOriginalPrice(product.leftButton?.originalPrice?.toString() || '');
+      setRightButtonLabel(product.rightButton?.label || 'Get Customized');
+      setRightButtonDescription(product.rightButton?.description || '');
+      setRightButtonPrice(product.rightButton?.price?.toString() || '');
+      setRightButtonOriginalPrice(product.rightButton?.originalPrice?.toString() || '');
+      setRightButtonShowForm(product.rightButton?.showForm ?? true);
+    }
     setShowProductForm(true);
   };
 
@@ -528,6 +591,15 @@ const Admin = () => {
     try {
       await update(ref(database, `customProjects/${project.id}`), { status });
       toast.success('Project status updated!');
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleUpdateSubmissionStatus = async (submissionId: string, status: string) => {
+    try {
+      await update(ref(database, `orderSubmissions/${submissionId}`), { status });
+      toast.success('Order status updated!');
     } catch (error) {
       toast.error('Failed to update status');
     }
@@ -684,6 +756,16 @@ const Admin = () => {
     toast.success('Logged out successfully');
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'completed': return 'bg-green-100 text-green-700 border-green-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
   if (!user || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -767,8 +849,17 @@ const Admin = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="products" className="w-full">
+        <Tabs defaultValue="submissions" className="w-full">
           <TabsList className="flex flex-wrap w-full gap-1 h-auto p-1 mb-4 overflow-x-auto">
+            <TabsTrigger value="submissions" className="flex items-center gap-1 text-xs px-2 py-1.5 relative">
+              <ClipboardList className="h-3 w-3" />
+              <span className="hidden xs:inline">Orders</span>
+              {orderSubmissions.filter(s => s.status === 'pending').length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                  {orderSubmissions.filter(s => s.status === 'pending').length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-1 text-xs px-2 py-1.5">
               <Package className="h-3 w-3" />
               <span className="hidden xs:inline">Products</span>
@@ -811,6 +902,145 @@ const Admin = () => {
               <span className="hidden xs:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Submissions/Orders Tab */}
+          <TabsContent value="submissions" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Order Submissions</h3>
+              <p className="text-xs text-muted-foreground">{orderSubmissions.length} total orders</p>
+            </div>
+            
+            {orderSubmissions.length > 0 ? (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">User</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Amount</TableHead>
+                      <TableHead className="text-xs">Date</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderSubmissions.map((submission) => (
+                      <TableRow key={submission.id}>
+                        <TableCell className="text-xs">
+                          <div>
+                            <p className="font-medium">{submission.userName || 'N/A'}</p>
+                            <p className="text-muted-foreground">{submission.userEmail}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <img src={submission.productImage} alt="" className="w-8 h-8 rounded object-cover" />
+                            <span className="max-w-[120px] truncate">{submission.productTitle}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">
+                            {submission.paymentType === 'right' ? 'Customized' : 'Source Code'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-green-600">₹{submission.paymentAmount}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(submission.createdAt).toLocaleDateString()}
+                          <br />
+                          {new Date(submission.createdAt).toLocaleTimeString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`text-[10px] ${getStatusColor(submission.status)}`}>
+                            {submission.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select value={submission.status} onValueChange={(v) => handleUpdateSubmissionStatus(submission.id, v)}>
+                            <SelectTrigger className="w-24 h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">No orders yet</p>
+            )}
+
+            {/* Form Data Details */}
+            {orderSubmissions.filter(s => s.formData).length > 0 && (
+              <div className="space-y-3 mt-6">
+                <h4 className="font-semibold text-sm">Customization Form Details</h4>
+                {orderSubmissions.filter(s => s.formData).map((submission) => (
+                  <div key={submission.id} className="p-4 bg-card border border-border rounded-xl">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div>
+                        <p className="font-medium text-sm">{submission.productTitle}</p>
+                        <p className="text-xs text-muted-foreground">{submission.userEmail}</p>
+                      </div>
+                      <Badge className={`text-[10px] ${getStatusColor(submission.status)}`}>
+                        {submission.status}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Name:</span>
+                        <p className="font-medium">{submission.formData?.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Calling:</span>
+                        <p className="font-medium">{submission.formData?.callingNumber}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">WhatsApp:</span>
+                        <p className="font-medium">{submission.formData?.whatsappNumber}</p>
+                      </div>
+                      {submission.formData?.instagramTelegramId && (
+                        <div>
+                          <span className="text-muted-foreground">IG/TG:</span>
+                          <p className="font-medium">{submission.formData.instagramTelegramId}</p>
+                        </div>
+                      )}
+                      {submission.formData?.alternativeNumber && (
+                        <div>
+                          <span className="text-muted-foreground">Alt Number:</span>
+                          <p className="font-medium">{submission.formData.alternativeNumber}</p>
+                        </div>
+                      )}
+                      {submission.formData?.videoDriveLink && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Video Link:</span>
+                          <a href={submission.formData.videoDriveLink} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline block truncate">
+                            {submission.formData.videoDriveLink}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    {submission.formData?.photos && submission.formData.photos.length > 0 && (
+                      <div className="mt-3">
+                        <span className="text-xs text-muted-foreground">Photos:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {submission.formData.photos.map((photo, i) => (
+                            <a key={i} href={photo} target="_blank" rel="noopener noreferrer">
+                              <img src={photo} alt="" className="w-16 h-16 rounded-lg object-cover border border-border hover:opacity-80" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           {/* Products Tab */}
           <TabsContent value="products" className="space-y-4">
@@ -893,7 +1123,68 @@ const Admin = () => {
                       <Switch checked={allowCustomization} onCheckedChange={setAllowCustomization} />
                       <Label className="text-xs text-purple-700 dark:text-purple-400">Allow Customization</Label>
                     </div>
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Switch checked={enableDualButtons} onCheckedChange={setEnableDualButtons} />
+                      <Label className="text-xs text-blue-700 dark:text-blue-400">Dual Pay Buttons</Label>
+                    </div>
                   </div>
+
+                  {/* Dual Button Configuration */}
+                  {enableDualButtons && (
+                    <div className="col-span-full border border-border rounded-lg p-4 space-y-4 bg-secondary/20">
+                      <h5 className="font-medium text-sm">Dual Button Configuration</h5>
+                      
+                      {/* Left Button */}
+                      <div className="space-y-3 p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs font-medium text-blue-600">Left Button (Source Code)</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Label</Label>
+                            <Input value={leftButtonLabel} onChange={(e) => setLeftButtonLabel(e.target.value)} placeholder="Source Code" className="h-8 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Price</Label>
+                            <Input type="number" value={leftButtonPrice} onChange={(e) => setLeftButtonPrice(e.target.value)} placeholder={price} className="h-8 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Original Price</Label>
+                            <Input type="number" value={leftButtonOriginalPrice} onChange={(e) => setLeftButtonOriginalPrice(e.target.value)} className="h-8 text-sm" />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-xs">Description</Label>
+                            <Input value={leftButtonDescription} onChange={(e) => setLeftButtonDescription(e.target.value)} placeholder="Description for this option" className="h-8 text-sm" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Button */}
+                      <div className="space-y-3 p-3 bg-card rounded-lg border border-border">
+                        <p className="text-xs font-medium text-purple-600">Right Button (Customized)</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Label</Label>
+                            <Input value={rightButtonLabel} onChange={(e) => setRightButtonLabel(e.target.value)} placeholder="Get Customized" className="h-8 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Price</Label>
+                            <Input type="number" value={rightButtonPrice} onChange={(e) => setRightButtonPrice(e.target.value)} placeholder={price} className="h-8 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Original Price</Label>
+                            <Input type="number" value={rightButtonOriginalPrice} onChange={(e) => setRightButtonOriginalPrice(e.target.value)} className="h-8 text-sm" />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-xs">Description</Label>
+                            <Input value={rightButtonDescription} onChange={(e) => setRightButtonDescription(e.target.value)} placeholder="Description for this option" className="h-8 text-sm" />
+                          </div>
+                          <div className="col-span-2 flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <Switch checked={rightButtonShowForm} onCheckedChange={setRightButtonShowForm} />
+                            <Label className="text-xs text-purple-700 dark:text-purple-400">Show Form After Payment</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button onClick={handleSaveProduct} className="w-full">{editingProduct ? 'Update' : 'Add'} Product</Button>
               </div>
@@ -923,6 +1214,9 @@ const Admin = () => {
                       )}
                       {product.allowCustomization && (
                         <Badge variant="outline" className="text-[10px]">Customizable</Badge>
+                      )}
+                      {(product.leftButton || product.rightButton) && (
+                        <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-600">Dual Pay</Badge>
                       )}
                     </div>
                     <div className="flex gap-2 mt-2">

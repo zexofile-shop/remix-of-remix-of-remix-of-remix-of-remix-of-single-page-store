@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product, CustomizationFormData } from '@/types';
+import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2, Package, Palette } from 'lucide-react';
@@ -12,11 +12,9 @@ import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
 import PaymentSuccessModal from '@/components/PaymentSuccessModal';
-import CouponInput from '@/components/CouponInput';
-import CustomizationForm from '@/components/CustomizationForm';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
-import { initiatePayment, hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from '@/services/paymentService';
+import { hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from '@/services/paymentService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,9 +33,6 @@ const ProductDetail = () => {
   const [lastPurchase, setLastPurchase] = useState<PurchaseRecord | null>(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(true);
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; couponId: string } | null>(null);
-  const [showCustomizationForm, setShowCustomizationForm] = useState(false);
-  const [purchaseType, setPurchaseType] = useState<'source_code' | 'customized'>('source_code');
   
   const inWishlist = id ? isInWishlist(id) : false;
   
@@ -75,7 +70,6 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!id) return;
     
-    // Try to find product in courses or websites
     const coursesRef = ref(database, 'courses');
     const websitesRef = ref(database, 'websites');
     
@@ -98,7 +92,6 @@ const ProductDetail = () => {
         setLoading(false);
       }
       
-      // If still not found after checking both, set loading false
       if (!foundProduct) {
         setLoading(false);
       }
@@ -123,7 +116,7 @@ const ProductDetail = () => {
     }
   };
 
-  const handleBuyNow = async (type: 'source_code' | 'customized' = 'source_code') => {
+  const handlePayment = (type: 'left' | 'right') => {
     if (!user) {
       toast.error('Please login to make a purchase');
       setIsAuthOpen(true);
@@ -138,71 +131,19 @@ const ProductDetail = () => {
       return;
     }
 
-    // If customization is selected, show the form first
-    if (type === 'customized' && product.allowCustomization) {
-      setPurchaseType('customized');
-      setShowCustomizationForm(true);
-      return;
-    }
-
-    // Handle free resources - no payment needed
-    if (product.price === 0 && product.isFreeResource) {
-      handleGetFreeResource();
-      return;
-    }
-
-    setPurchaseType(type);
-    processPayment(type);
-  };
-
-  const processPayment = async (type: 'source_code' | 'customized', customizationData?: CustomizationFormData) => {
-    if (!user || !product) return;
-
-    setIsProcessingPayment(true);
-    
-    try {
-      const couponData = appliedCoupon ? {
-        couponId: appliedCoupon.couponId,
-        couponCode: appliedCoupon.code,
-        discount: appliedCoupon.discount,
-      } : undefined;
-
-      await initiatePayment(
-        product,
-        {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-        },
-        (purchase) => {
-          // Add purchase type and customization data
-          const enrichedPurchase = {
-            ...purchase,
-            purchaseType: type,
-            customizationData: customizationData,
-          };
-          setLastPurchase(enrichedPurchase);
-          setShowSuccessModal(true);
-          setAlreadyPurchased(true);
-          setAppliedCoupon(null);
-          toast.success('Payment successful!');
-          setIsProcessingPayment(false);
-        },
-        (error) => {
-          toast.error(error);
-          setIsProcessingPayment(false);
-        },
-        couponData
-      );
-    } catch (error) {
-      toast.error('Something went wrong. Please try again.');
-      setIsProcessingPayment(false);
-    }
+    // Navigate to payment page
+    navigate(`/payment/${product.id}?type=${type}`);
   };
 
   // Handle free resource access
   const handleGetFreeResource = async () => {
-    if (!user || !product) return;
+    if (!user) {
+      toast.error('Please login to access this resource');
+      setIsAuthOpen(true);
+      return;
+    }
+
+    if (!product) return;
     
     setIsProcessingPayment(true);
     try {
@@ -217,23 +158,6 @@ const ProductDetail = () => {
       setIsProcessingPayment(false);
     }
   };
-
-  const handleCustomizationSubmit = async (data: CustomizationFormData) => {
-    // After form submission, proceed with payment
-    setShowCustomizationForm(false);
-    await processPayment('customized', data);
-  };
-
-  const handleApplyCoupon = (discount: number, couponId: string, couponCode: string) => {
-    setAppliedCoupon({ code: couponCode, discount, couponId });
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-  };
-
-  // Calculate final price
-  const finalPrice = product ? product.price - (appliedCoupon?.discount || 0) : 0;
 
   const handleRemoveFromCart = (productId: string) => {
     setCart((prev) => prev.filter((p) => p.id !== productId));
@@ -267,6 +191,36 @@ const ProductDetail = () => {
   const prevScreenshot = () => {
     setCurrentScreenshotIndex((prev) => (prev - 1 + totalMediaItems) % totalMediaItems);
   };
+
+  // Get pricing info for left and right buttons
+  const getLeftPricing = () => {
+    if (product?.leftButton) {
+      return {
+        price: product.leftButton.price,
+        originalPrice: product.leftButton.originalPrice,
+        label: product.leftButton.label || 'Source Code',
+      };
+    }
+    return {
+      price: product?.price || 0,
+      originalPrice: product?.originalPrice,
+      label: 'Source Code',
+    };
+  };
+
+  const getRightPricing = () => {
+    if (product?.rightButton) {
+      return {
+        price: product.rightButton.price,
+        originalPrice: product.rightButton.originalPrice,
+        label: product.rightButton.label || 'Get Customized',
+      };
+    }
+    return null;
+  };
+
+  const leftPricing = getLeftPricing();
+  const rightPricing = getRightPricing();
 
   if (loading) {
     return (
@@ -443,41 +397,17 @@ const ProductDetail = () => {
                       Rs. {product.originalPrice?.toFixed(2)}
                     </span>
                   )}
-                  <span className={`text-2xl font-bold ${appliedCoupon ? 'text-muted-foreground line-through text-lg' : 'text-primary'}`}>
+                  <span className="text-2xl font-bold text-primary">
                     Rs. {product.price.toFixed(2)}
                   </span>
-                  {appliedCoupon && (
-                    <span className="text-2xl font-bold text-primary">
-                      Rs. {finalPrice.toFixed(2)}
-                    </span>
-                  )}
-                  {hasDiscount && !appliedCoupon && (
+                  {hasDiscount && (
                     <Badge variant="secondary" className="bg-green-100 text-green-700">
                       Save {discountPercentage}%
-                    </Badge>
-                  )}
-                  {appliedCoupon && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700">
-                      Coupon: -{appliedCoupon.discount}
                     </Badge>
                   )}
                 </>
               )}
             </div>
-
-            {/* Coupon Input */}
-            {user && !alreadyPurchased && product.price > 0 && (
-              <div className="mb-4">
-                <CouponInput
-                  originalAmount={product.price}
-                  userId={user.uid}
-                  userEmail={user.email || ''}
-                  onApply={handleApplyCoupon}
-                  onRemove={handleRemoveCoupon}
-                  appliedCoupon={appliedCoupon ? { code: appliedCoupon.code, discount: appliedCoupon.discount } : null}
-                />
-              </div>
-            )}
 
             {/* Already Purchased Badge */}
             {alreadyPurchased && (
@@ -548,47 +478,48 @@ const ProductDetail = () => {
                 </Button>
               ) : (
                 <>
-                  {/* Source Code Only Button */}
+                  {/* Add to Cart Button - At Top */}
                   <Button
+                    variant="outline"
                     size="lg"
-                    className="w-full py-6 text-base font-semibold"
-                    onClick={() => handleBuyNow('source_code')}
-                    disabled={isProcessingPayment}
-                  >
-                    {isProcessingPayment && purchaseType === 'source_code' ? (
-                      <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
-                    ) : (
-                      <><CreditCard className="h-5 w-5 mr-2" />Buy Source Code</>
-                    )}
-                  </Button>
-
-                  {/* Customize Button - Only if allowed */}
-                  {product.allowCustomization && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full py-6 text-base font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => handleBuyNow('customized')}
-                      disabled={isProcessingPayment}
-                    >
-                      {isProcessingPayment && purchaseType === 'customized' ? (
-                        <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
-                      ) : (
-                        <><Palette className="h-5 w-5 mr-2" />Get Customized</>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* Add to Cart - Only for non-free products */}
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    className="w-full py-6 text-base font-semibold"
+                    className="w-full py-5 text-base font-semibold border-primary text-primary hover:bg-primary/10"
                     onClick={handleAddToCart}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
                     Add to Cart
                   </Button>
+
+                  {/* Dual Pay Buttons */}
+                  <div className="flex gap-3">
+                    {/* Left Pay Button */}
+                    <Button
+                      size="lg"
+                      className="flex-1 py-6 text-sm font-semibold"
+                      onClick={() => handlePayment('left')}
+                    >
+                      <CreditCard className="h-4 w-4 mr-1" />
+                      <div className="flex flex-col items-start">
+                        <span>{leftPricing.label}</span>
+                        <span className="text-xs opacity-80">₹{leftPricing.price}</span>
+                      </div>
+                    </Button>
+
+                    {/* Right Pay Button - Only if configured */}
+                    {(rightPricing || product.allowCustomization) && (
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className="flex-1 py-6 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
+                        onClick={() => handlePayment('right')}
+                      >
+                        <Palette className="h-4 w-4 mr-1" />
+                        <div className="flex flex-col items-start">
+                          <span>{rightPricing?.label || 'Get Customized'}</span>
+                          <span className="text-xs opacity-80">₹{rightPricing?.price || product.price}</span>
+                        </div>
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -619,12 +550,6 @@ const ProductDetail = () => {
         onClose={() => setShowSuccessModal(false)}
         purchase={lastPurchase}
         onViewProfile={() => navigate('/profile')}
-      />
-      <CustomizationForm
-        isOpen={showCustomizationForm}
-        onClose={() => setShowCustomizationForm(false)}
-        onSubmit={handleCustomizationSubmit}
-        productTitle={product.title}
       />
     </div>
   );

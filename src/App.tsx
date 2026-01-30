@@ -9,6 +9,8 @@ import { WishlistProvider } from "./contexts/WishlistContext";
 import Landing from "./pages/Landing";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
+import PaymentPage from "./pages/PaymentPage";
+import CustomizationFormPage from "./pages/CustomizationFormPage";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
@@ -64,6 +66,8 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/payment/:id" element={<PaymentPage />} />
+                <Route path="/customization-form/:productId" element={<CustomizationFormPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/profile" element={<Profile />} />
