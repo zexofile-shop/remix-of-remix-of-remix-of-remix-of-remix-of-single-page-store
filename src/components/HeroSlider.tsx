@@ -17,6 +17,7 @@ interface SliderImage {
 const HeroSlider = () => {
   const [slides, setSlides] = useState<SliderImage[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const slidesRef = ref(database, 'heroSlides');
@@ -28,43 +29,14 @@ const HeroSlider = () => {
             .sort((a, b) => a.order - b.order)
         : [];
       setSlides(list);
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Demo slides if none exist
-  const demoSlides: SliderImage[] = [
-    {
-      id: '1',
-      imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&h=1080&fit=crop',
-      title: 'Create Beautiful Memories',
-      subtitle: 'Personal websites made just for your loved ones',
-      buttonText: 'Explore Now',
-      buttonLink: '/shop',
-      order: 1,
-    },
-    {
-      id: '2',
-      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&h=1080&fit=crop',
-      title: 'Express Your Love',
-      subtitle: 'Turn emotions into a beautiful digital experience',
-      buttonText: 'Shop Now',
-      buttonLink: '/shop',
-      order: 2,
-    },
-    {
-      id: '3',
-      imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&h=1080&fit=crop',
-      title: 'Gift Something Special',
-      subtitle: 'A unique present they will never forget',
-      buttonText: 'View Products',
-      buttonLink: '/shop',
-      order: 3,
-    },
-  ];
-
-  const displaySlides = slides.length > 0 ? slides : demoSlides;
+  // Only show real data from database
+  const displaySlides = slides;
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % displaySlides.length);
@@ -81,7 +53,8 @@ const HeroSlider = () => {
     return () => clearInterval(timer);
   }, [nextSlide, displaySlides.length]);
 
-  if (displaySlides.length === 0) return null;
+  // Show nothing while loading or if no slides
+  if (loading || displaySlides.length === 0) return null;
 
   const handleButtonClick = (link?: string) => {
     if (link) {

@@ -84,50 +84,8 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
     ? products.filter(p => bestSellingIds.includes(p.id)).slice(0, 4)
     : products.slice(0, 4);
 
-  // Demo products if database is empty
-  const demoProducts: Product[] = [
-    {
-      id: '1',
-      title: 'Birthday Love Website',
-      description: 'A personalized birthday wish website for your loved ones',
-      price: 199,
-      originalPrice: 299,
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '2',
-      title: 'Anniversary Memory Page',
-      description: 'Capture your beautiful journey together in a stunning website',
-      price: 249,
-      originalPrice: 399,
-      image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '3',
-      title: 'Friendship Day Special',
-      description: 'Celebrate your bond with a unique friendship website',
-      price: 149,
-      image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '4',
-      title: 'Valentine\'s Love Letter',
-      description: 'Express your love with a romantic digital letter',
-      price: 179,
-      originalPrice: 249,
-      image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-  ];
-
-  const productsToShow = displayProducts.length > 0 ? displayProducts : demoProducts;
+  // Don't show demo products - only show real data from database
+  const productsToShow = displayProducts;
 
   return (
     <section className="py-16 bg-secondary/30">
