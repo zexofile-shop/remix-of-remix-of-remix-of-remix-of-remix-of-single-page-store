@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, onValue, push, set, remove, update } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
+import { database, ADMIN_EMAIL } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Product, CustomProject, Purchase, Testimonial, SupportChannels, OrderSubmission } from '@/types';
 import { Coupon, ContactMessage } from '@/types/coupon';
+import { AdminUser, AdminPermissions, DEFAULT_PERMISSIONS, FULL_PERMISSIONS, PERMISSION_LABELS } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { 
   Trash2, Edit, Plus, X, LogOut, Package, Users, FileText, Settings, Image, Star, 
   MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield,
-  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User, ClipboardList
+  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User, ClipboardList, UserCog, Crown
 } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import zexofileLogo from '@/assets/zexofile-logo.png';
@@ -314,6 +317,18 @@ const Admin = () => {
   const [couponMinOrder, setCouponMinOrder] = useState('');
   const [couponMaxUses, setCouponMaxUses] = useState('');
 
+  // Admin management state
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [showAdminForm, setShowAdminForm] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminRole, setAdminRole] = useState<'admin' | 'moderator'>('moderator');
+  const [adminAccessLevel, setAdminAccessLevel] = useState([50]);
+  const [adminPermissions, setAdminPermissions] = useState<AdminPermissions>(DEFAULT_PERMISSIONS);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  
+  // Check if current user is super admin
+  const isSuperAdmin = user?.email === ADMIN_EMAIL;
+
   // Calculate real stats
   const totalUsers = allUsers.length;
   const totalRevenue = allPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -443,6 +458,14 @@ const Admin = () => {
       setCoupons(list.sort((a, b) => b.createdAt - a.createdAt));
     });
 
+    // Fetch admin users
+    const adminsRef = ref(database, 'adminUsers');
+    const unsubscribeAdmins = onValue(adminsRef, (snapshot) => {
+      const data = snapshot.val();
+      const list: AdminUser[] = data ? Object.entries(data).map(([id, value]: [string, any]) => ({ ...value, id })) : [];
+      setAdminUsers(list.sort((a, b) => b.createdAt - a.createdAt));
+    });
+
     return () => {
       unsubscribePurchases();
       unsubscribeSubmissions();
@@ -457,6 +480,7 @@ const Admin = () => {
       unsubscribeSupport();
       unsubscribeMessages();
       unsubscribeCoupons();
+      unsubscribeAdmins();
     };
   }, [user, isAdmin]);
 
@@ -750,6 +774,109 @@ const Admin = () => {
     }
   };
 
+  // Admin Management Functions
+  const handleAddAdmin = async () => {
+    if (!adminEmail) {
+      toast.error('Please enter an email');
+      return;
+    }
+
+    // Find user by email
+    const foundUser = allUsers.find(u => u.email.toLowerCase() === adminEmail.toLowerCase());
+    if (!foundUser) {
+      toast.error('User not found. They must sign up first.');
+      return;
+    }
+
+    // Check if already an admin
+    if (adminUsers.find(a => a.email.toLowerCase() === adminEmail.toLowerCase())) {
+      toast.error('This user is already an admin');
+      return;
+    }
+
+    try {
+      await push(ref(database, 'adminUsers'), {
+        email: adminEmail.toLowerCase(),
+        userId: foundUser.id,
+        role: adminRole,
+        accessLevel: adminAccessLevel[0],
+        permissions: adminPermissions,
+        createdAt: Date.now(),
+        createdBy: user?.email || '',
+        isActive: true,
+      });
+      toast.success('Admin added successfully!');
+      resetAdminForm();
+    } catch (error) {
+      toast.error('Failed to add admin');
+    }
+  };
+
+  const handleUpdateAdmin = async () => {
+    if (!editingAdmin) return;
+
+    try {
+      await update(ref(database, `adminUsers/${editingAdmin.id}`), {
+        role: adminRole,
+        accessLevel: adminAccessLevel[0],
+        permissions: adminPermissions,
+      });
+      toast.success('Admin updated!');
+      resetAdminForm();
+    } catch (error) {
+      toast.error('Failed to update admin');
+    }
+  };
+
+  const handleToggleAdminStatus = async (admin: AdminUser) => {
+    try {
+      await update(ref(database, `adminUsers/${admin.id}`), { isActive: !admin.isActive });
+      toast.success(admin.isActive ? 'Admin deactivated' : 'Admin activated');
+    } catch (error) {
+      toast.error('Failed to update admin status');
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId: string) => {
+    if (!confirm('Remove this admin?')) return;
+    try {
+      await remove(ref(database, `adminUsers/${adminId}`));
+      toast.success('Admin removed!');
+    } catch (error) {
+      toast.error('Failed to remove admin');
+    }
+  };
+
+  const resetAdminForm = () => {
+    setShowAdminForm(false);
+    setAdminEmail('');
+    setAdminRole('moderator');
+    setAdminAccessLevel([50]);
+    setAdminPermissions(DEFAULT_PERMISSIONS);
+    setEditingAdmin(null);
+  };
+
+  const startEditAdmin = (admin: AdminUser) => {
+    setEditingAdmin(admin);
+    setAdminEmail(admin.email);
+    setAdminRole(admin.role as 'admin' | 'moderator');
+    setAdminAccessLevel([admin.accessLevel]);
+    setAdminPermissions(admin.permissions);
+    setShowAdminForm(true);
+  };
+
+  const togglePermission = (key: keyof AdminPermissions) => {
+    setAdminPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const selectAllPermissions = () => {
+    setAdminPermissions(FULL_PERMISSIONS);
+  };
+
+  const clearAllPermissions = () => {
+    setAdminPermissions(DEFAULT_PERMISSIONS);
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -901,6 +1028,12 @@ const Admin = () => {
               <Settings className="h-3 w-3" />
               <span className="hidden xs:inline">Settings</span>
             </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="admins" className="flex items-center gap-1 text-xs px-2 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                <Crown className="h-3 w-3 text-amber-500" />
+                <span className="hidden xs:inline">Admins</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Submissions/Orders Tab */}
@@ -1571,6 +1704,205 @@ const Admin = () => {
               }}>Save Settings</Button>
             </div>
           </TabsContent>
+
+          {/* Admin Management Tab - Super Admin Only */}
+          {isSuperAdmin && (
+            <TabsContent value="admins" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    Admin Management
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Manage admin users, roles, and permissions</p>
+                </div>
+                <Button size="sm" onClick={() => { resetAdminForm(); setShowAdminForm(true); }}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Admin
+                </Button>
+              </div>
+
+              {/* Add/Edit Admin Form */}
+              {showAdminForm && (
+                <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium text-sm">{editingAdmin ? 'Edit Admin' : 'Add New Admin'}</h4>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetAdminForm}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">User Email *</Label>
+                      <Input
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        placeholder="user@example.com"
+                        disabled={!!editingAdmin}
+                        className="h-9 text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">User must be registered on the platform</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Role</Label>
+                      <Select value={adminRole} onValueChange={(v: 'admin' | 'moderator') => setAdminRole(v)}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin (Full Access)</SelectItem>
+                          <SelectItem value="moderator">Moderator (Limited Access)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-xs">Access Level: {adminAccessLevel[0]}%</Label>
+                      <span className="text-[10px] text-muted-foreground">
+                        {adminAccessLevel[0] < 30 ? 'Low' : adminAccessLevel[0] < 70 ? 'Medium' : 'High'} Access
+                      </span>
+                    </div>
+                    <Slider
+                      value={adminAccessLevel}
+                      onValueChange={setAdminAccessLevel}
+                      max={100}
+                      step={5}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>0%</span>
+                      <span>50%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-xs">Section Permissions</Label>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={selectAllPermissions}>
+                          Select All
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={clearAllPermissions}>
+                          Clear All
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {(Object.keys(PERMISSION_LABELS) as (keyof AdminPermissions)[]).map((key) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`perm-${key}`}
+                            checked={adminPermissions[key]}
+                            onCheckedChange={() => togglePermission(key)}
+                          />
+                          <label
+                            htmlFor={`perm-${key}`}
+                            className="text-xs font-medium cursor-pointer"
+                          >
+                            {PERMISSION_LABELS[key]}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full"
+                    onClick={editingAdmin ? handleUpdateAdmin : handleAddAdmin}
+                  >
+                    {editingAdmin ? 'Update Admin' : 'Add Admin'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Admin List */}
+              <div className="space-y-3">
+                {/* Super Admin (You) */}
+                <div className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-500/20 rounded-full">
+                        <Crown className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{ADMIN_EMAIL}</p>
+                          <Badge className="bg-amber-500 text-white text-[10px]">Super Admin</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Full access to all sections • Cannot be removed</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-green-500 text-green-600">Active</Badge>
+                  </div>
+                </div>
+
+                {/* Other Admins */}
+                {adminUsers.map((admin) => (
+                  <div 
+                    key={admin.id} 
+                    className={`p-4 bg-card border rounded-xl ${admin.isActive ? 'border-border' : 'border-red-500/30 opacity-60'}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${admin.role === 'admin' ? 'bg-primary/20' : 'bg-secondary'}`}>
+                          <UserCog className={`h-5 w-5 ${admin.role === 'admin' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{admin.email}</p>
+                            <Badge variant="outline" className="text-[10px] capitalize">{admin.role}</Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">Access: {admin.accessLevel}%</span>
+                            <span className="text-[10px] text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground">
+                              Added {new Date(admin.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {(Object.keys(admin.permissions) as (keyof AdminPermissions)[])
+                              .filter(key => admin.permissions[key])
+                              .slice(0, 4)
+                              .map((key) => (
+                                <Badge key={key} variant="secondary" className="text-[9px] px-1.5 py-0">
+                                  {PERMISSION_LABELS[key]}
+                                </Badge>
+                              ))}
+                            {Object.values(admin.permissions).filter(Boolean).length > 4 && (
+                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                                +{Object.values(admin.permissions).filter(Boolean).length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={admin.isActive}
+                          onCheckedChange={() => handleToggleAdminStatus(admin)}
+                        />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEditAdmin(admin)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteAdmin(admin.id)}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {adminUsers.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8 bg-secondary/30 rounded-xl text-sm">
+                    No additional admins. Click "Add Admin" to add team members.
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
