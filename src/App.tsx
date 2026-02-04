@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import Landing from "./pages/Landing";
@@ -17,6 +17,33 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// SPA redirect handler for GitHub Pages / Hostinger
+const SPARedirectHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check for redirect from 404.html
+    const redirectPath = sessionStorage.getItem('spa-redirect');
+    if (redirectPath) {
+      sessionStorage.removeItem('spa-redirect');
+      const path = '/' + redirectPath.replace(/~and~/g, '&');
+      navigate(path, { replace: true });
+      return;
+    }
+
+    // Also check URL parameter (backup method)
+    const urlParams = new URLSearchParams(location.search);
+    const pathParam = urlParams.get('p');
+    if (pathParam && location.pathname === '/') {
+      const path = '/' + pathParam.replace(/~and~/g, '&');
+      navigate(path, { replace: true });
+    }
+  }, [navigate, location]);
+
+  return null;
+};
 
 // Copy protection component
 const CopyProtection = ({ children }: { children: React.ReactNode }) => {
@@ -62,6 +89,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <SPARedirectHandler />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/shop" element={<Shop />} />

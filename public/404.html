@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting... | ZexoFile Shop</title>
+    <script type="text/javascript">
+        // GitHub Pages / Hostinger SPA redirect script
+        // Redirects all 404s to the root with the path stored in sessionStorage
+        var pathSegmentsToKeep = 0;
+
+        var l = window.location;
+        var pathAndHash = l.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash;
+        
+        // Store the original path for the main app to handle
+        sessionStorage.setItem('spa-redirect', pathAndHash);
+        
+        // Redirect to root
+        l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/?p=' + pathAndHash);
+    </script>
+</head>
+<body>
+    <noscript>
+        <meta http-equiv="refresh" content="0; url=/" />
+    </noscript>
+    <div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;">
+        <div style="text-align:center;">
+            <div style="width:40px;height:40px;border:3px solid #7c3aed;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+            <p>Redirecting...</p>
+        </div>
+    </div>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>
