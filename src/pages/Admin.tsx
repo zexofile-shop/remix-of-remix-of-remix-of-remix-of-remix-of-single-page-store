@@ -288,9 +288,11 @@ const Admin = () => {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isFreeResource, setIsFreeResource] = useState(false);
   const [allowCustomization, setAllowCustomization] = useState(false);
+  const [isOutOfStock, setIsOutOfStock] = useState(false);
   
   // Dual button configuration
   const [enableDualButtons, setEnableDualButtons] = useState(false);
+  const [displayPriceFrom, setDisplayPriceFrom] = useState<'base' | 'left' | 'right'>('base');
   const [leftButtonLabel, setLeftButtonLabel] = useState('Source Code');
   const [leftButtonDescription, setLeftButtonDescription] = useState('');
   const [leftButtonPrice, setLeftButtonPrice] = useState('');
@@ -497,9 +499,11 @@ const Admin = () => {
     setYoutubeUrl('');
     setIsFreeResource(false);
     setAllowCustomization(false);
+    setIsOutOfStock(false);
     setEditingProduct(null);
     // Reset dual button config
     setEnableDualButtons(false);
+    setDisplayPriceFrom('base');
     setLeftButtonLabel('Source Code');
     setLeftButtonDescription('');
     setLeftButtonPrice('');
@@ -532,6 +536,8 @@ const Admin = () => {
       youtubeUrl: youtubeUrl || null,
       isFreeResource: priceNum === 0 ? isFreeResource : false,
       allowCustomization,
+      isOutOfStock,
+      displayPriceFrom: enableDualButtons ? displayPriceFrom : 'base',
       createdAt: Date.now(),
     };
 
@@ -595,9 +601,13 @@ const Admin = () => {
     setYoutubeUrl(product.youtubeUrl || '');
     setIsFreeResource(product.isFreeResource || false);
     setAllowCustomization(product.allowCustomization || false);
+    setIsOutOfStock(product.isOutOfStock || false);
     // Load dual button config
     if (product.leftButton || product.rightButton) {
       setEnableDualButtons(true);
+      setDisplayPriceFrom(
+        product.displayPriceFrom || (product.leftButton ? 'left' : product.rightButton ? 'right' : 'base')
+      );
       setLeftButtonLabel(product.leftButton?.label || 'Source Code');
       setLeftButtonDescription(product.leftButton?.description || '');
       setLeftButtonPrice(product.leftButton?.price?.toString() || '');
@@ -607,6 +617,9 @@ const Admin = () => {
       setRightButtonPrice(product.rightButton?.price?.toString() || '');
       setRightButtonOriginalPrice(product.rightButton?.originalPrice?.toString() || '');
       setRightButtonShowForm(product.rightButton?.showForm ?? true);
+    } else {
+      setEnableDualButtons(false);
+      setDisplayPriceFrom('base');
     }
     setShowProductForm(true);
   };
@@ -1256,6 +1269,10 @@ const Admin = () => {
                       <Switch checked={allowCustomization} onCheckedChange={setAllowCustomization} />
                       <Label className="text-xs text-purple-700 dark:text-purple-400">Allow Customization</Label>
                     </div>
+                    <div className="flex items-center gap-2 p-2 bg-destructive/10 rounded-lg">
+                      <Switch checked={isOutOfStock} onCheckedChange={setIsOutOfStock} />
+                      <Label className="text-xs text-destructive">Out of Stock</Label>
+                    </div>
                     <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <Switch checked={enableDualButtons} onCheckedChange={setEnableDualButtons} />
                       <Label className="text-xs text-blue-700 dark:text-blue-400">Dual Pay Buttons</Label>
@@ -1266,6 +1283,19 @@ const Admin = () => {
                   {enableDualButtons && (
                     <div className="col-span-full border border-border rounded-lg p-4 space-y-4 bg-secondary/20">
                       <h5 className="font-medium text-sm">Dual Button Configuration</h5>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Main price to show</Label>
+                        <Select value={displayPriceFrom} onValueChange={(v) => setDisplayPriceFrom(v as any)}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="base">Base price</SelectItem>
+                            <SelectItem value="left">Left button price</SelectItem>
+                            <SelectItem value="right">Right button price</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] text-muted-foreground">This price will be shown on product card & product page.</p>
+                      </div>
                       
                       {/* Left Button */}
                       <div className="space-y-3 p-3 bg-card rounded-lg border border-border">
@@ -1344,6 +1374,11 @@ const Admin = () => {
                         <span className="font-bold text-sm text-green-600">FREE</span>
                       ) : (
                         <span className="font-bold text-sm text-primary">₹{product.price}</span>
+                      )}
+                      {product.isOutOfStock && (
+                        <Badge className="text-[10px] bg-destructive/10 text-destructive border border-destructive/20">
+                          Out of Stock
+                        </Badge>
                       )}
                       {product.allowCustomization && (
                         <Badge variant="outline" className="text-[10px]">Customizable</Badge>

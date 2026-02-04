@@ -1,6 +1,7 @@
 import { Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types';
+import { getMainDisplayPricing } from '@/lib/productPricing';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -14,10 +15,13 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const inWishlist = isInWishlist(product.id);
+
+  const isOutOfStock = !!product.isOutOfStock;
+  const mainPricing = getMainDisplayPricing(product);
   
-  const hasDiscount = product.originalPrice && product.originalPrice > product.price;
+  const hasDiscount = !!(mainPricing.originalPrice && mainPricing.originalPrice > mainPricing.price);
   const discountPercentage = hasDiscount 
-    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    ? Math.round(((mainPricing.originalPrice! - mainPricing.price) / mainPricing.originalPrice!) * 100)
     : 0;
 
   const handleCardClick = () => {
@@ -36,7 +40,9 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
 
   return (
     <div 
-      className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 group cursor-pointer"
+      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 group cursor-pointer ${
+        isOutOfStock ? 'opacity-80' : ''
+      }`}
       onClick={handleCardClick}
     >
       <div className="relative aspect-[4/3] overflow-hidden gradient-card bg-secondary/30">
@@ -45,6 +51,11 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
           alt={product.title}
           className="w-full h-full object-contain bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
         />
+        {isOutOfStock && (
+          <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground font-bold">
+            OUT OF STOCK
+          </Badge>
+        )}
         {product.price === 0 && product.isFreeResource ? (
           <Badge className="absolute top-3 left-3 bg-green-600 text-white font-bold">
             FREE
@@ -86,11 +97,11 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
             <>
               {hasDiscount && (
                 <span className="text-xs text-muted-foreground line-through">
-                  Rs. {product.originalPrice?.toFixed(2)}
+                  Rs. {mainPricing.originalPrice?.toFixed(2)}
                 </span>
               )}
               <span className="font-bold text-primary">
-                Rs. {product.price.toFixed(2)}
+                Rs. {mainPricing.price.toFixed(2)}
               </span>
               {hasDiscount && (
                 <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">

@@ -15,6 +15,7 @@ import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from '@/services/paymentService';
+import { getMainDisplayPricing } from '@/lib/productPricing';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -109,6 +110,11 @@ const ProductDetail = () => {
       setIsAuthOpen(true);
       return;
     }
+
+    if (product?.isOutOfStock) {
+      toast.error('This product is currently out of stock');
+      return;
+    }
     
     if (product) {
       setCart((prev) => [...prev, product]);
@@ -124,6 +130,11 @@ const ProductDetail = () => {
     }
 
     if (!product) return;
+
+    if (product.isOutOfStock) {
+      toast.error('This product is currently out of stock');
+      return;
+    }
 
     if (alreadyPurchased) {
       toast.info('You have already purchased this product. Check your profile.');
@@ -163,9 +174,11 @@ const ProductDetail = () => {
     setCart((prev) => prev.filter((p) => p.id !== productId));
   };
 
-  const hasDiscount = product?.originalPrice && product.originalPrice > product.price;
+  // NOTE: main pricing (shown on page) can be configured separately for dual buttons
+  const mainPricing = product ? getMainDisplayPricing(product) : null;
+  const hasDiscount = !!(mainPricing?.originalPrice && mainPricing.originalPrice > mainPricing.price);
   const discountPercentage = hasDiscount 
-    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    ? Math.round(((mainPricing!.originalPrice! - mainPricing!.price) / mainPricing!.originalPrice!) * 100)
     : 0;
 
   // Extract YouTube video ID from URL
@@ -394,11 +407,11 @@ const ProductDetail = () => {
                 <>
                   {hasDiscount && (
                     <span className="text-lg text-muted-foreground line-through">
-                      Rs. {product.originalPrice?.toFixed(2)}
+                      Rs. {mainPricing?.originalPrice?.toFixed(2)}
                     </span>
                   )}
                   <span className="text-2xl font-bold text-primary">
-                    Rs. {product.price.toFixed(2)}
+                    Rs. {(mainPricing?.price ?? product.price).toFixed(2)}
                   </span>
                   {hasDiscount && (
                     <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -463,6 +476,10 @@ const ProductDetail = () => {
                   <Package className="h-5 w-5 mr-2" />
                   View in Profile
                 </Button>
+              ) : product.isOutOfStock ? (
+                <Button size="lg" disabled className="w-full py-6 text-base font-semibold">
+                  Out of Stock
+                </Button>
               ) : product.price === 0 && product.isFreeResource ? (
                 <Button
                   size="lg"
@@ -494,13 +511,13 @@ const ProductDetail = () => {
                     {/* Left Pay Button */}
                     <Button
                       size="lg"
-                      className="flex-1 py-6 text-sm font-semibold"
+                      className="flex-1 py-6 text-base font-semibold"
                       onClick={() => handlePayment('left')}
                     >
                       <CreditCard className="h-4 w-4 mr-1" />
-                      <div className="flex flex-col items-start">
-                        <span>{leftPricing.label}</span>
-                        <span className="text-xs opacity-80">₹{leftPricing.price}</span>
+                      <div className="flex flex-col items-start leading-tight">
+                        <span className="text-sm md:text-base">{leftPricing.label}</span>
+                        <span className="text-base font-bold opacity-90">₹{leftPricing.price}</span>
                       </div>
                     </Button>
 
@@ -509,13 +526,13 @@ const ProductDetail = () => {
                       <Button
                         size="lg"
                         variant="secondary"
-                        className="flex-1 py-6 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
+                        className="flex-1 py-6 text-base font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
                         onClick={() => handlePayment('right')}
                       >
                         <Palette className="h-4 w-4 mr-1" />
-                        <div className="flex flex-col items-start">
-                          <span>{rightPricing?.label || 'Get Customized'}</span>
-                          <span className="text-xs opacity-80">₹{rightPricing?.price || product.price}</span>
+                        <div className="flex flex-col items-start leading-tight">
+                          <span className="text-sm md:text-base">{rightPricing?.label || 'Get Customized'}</span>
+                          <span className="text-base font-bold opacity-90">₹{rightPricing?.price || product.price}</span>
                         </div>
                       </Button>
                     )}
