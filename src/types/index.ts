@@ -15,6 +15,9 @@ export interface Product {
   youtubeUrl?: string;
   isFreeResource?: boolean;
   allowCustomization?: boolean;
+  isOutOfStock?: boolean;
+  /** Which price should be shown as the main price on cards/details when dual buttons exist */
+  displayPriceFrom?: 'base' | 'left' | 'right';
   // Dual pricing configuration
   leftButton?: {
     label?: string;

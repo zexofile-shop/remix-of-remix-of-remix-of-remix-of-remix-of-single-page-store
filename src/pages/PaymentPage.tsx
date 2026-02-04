@@ -180,6 +180,11 @@ const PaymentPage = () => {
 
     if (!product) return;
 
+    if (product.isOutOfStock) {
+      toast.error('This product is currently out of stock');
+      return;
+    }
+
     if (alreadyPurchased) {
       toast.info('You already own this product');
       navigate('/profile');
@@ -412,10 +417,12 @@ const PaymentPage = () => {
                 size="lg"
                 className="w-full mt-4 py-6 text-base font-semibold"
                 onClick={handlePayment}
-                disabled={isProcessing || alreadyPurchased}
+                disabled={isProcessing || alreadyPurchased || !!product.isOutOfStock}
               >
                 {isProcessing ? (
                   <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
+                ) : product.isOutOfStock ? (
+                  'Out of Stock'
                 ) : alreadyPurchased ? (
                   'Already Purchased'
                 ) : (

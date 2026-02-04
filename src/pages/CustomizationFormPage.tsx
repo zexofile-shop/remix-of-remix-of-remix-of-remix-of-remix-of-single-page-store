@@ -11,6 +11,17 @@ import { uploadToImgBB } from '@/lib/imgbb';
 import { CustomizationFormData } from '@/types';
 import { Loader2, Upload, X, CheckCircle, Phone, User, Camera, Video, MessageCircle, ArrowLeft } from 'lucide-react';
 import zexofileLogo from '@/assets/zexofile-logo.png';
+import { z } from 'zod';
+
+const customizationFormSchema = z.object({
+  name: z.string().trim().min(1, 'Please enter your name').max(80, 'Name is too long'),
+  instagramTelegramId: z.string().trim().max(80, 'Instagram/Telegram ID is too long').optional(),
+  callingNumber: z.string().trim().min(5, 'Please enter your calling number').max(20, 'Calling number is too long'),
+  whatsappNumber: z.string().trim().min(5, 'Please enter your WhatsApp number').max(20, 'WhatsApp number is too long'),
+  alternativeNumber: z.string().trim().max(20, 'Alternative number is too long').optional(),
+  photos: z.array(z.string().trim().min(1)).max(20, 'Too many photos').optional(),
+  videoDriveLink: z.string().trim().max(500, 'Video link is too long').optional(),
+});
 
 const CustomizationFormPage = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -98,35 +109,40 @@ const CustomizationFormPage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-    if (!callingNumber.trim()) {
-      toast.error('Please enter your calling number');
-      return;
-    }
-    if (!whatsappNumber.trim()) {
-      toast.error('Please enter your WhatsApp number');
-      return;
-    }
-
     if (!orderId) {
       toast.error('Invalid order');
       return;
     }
 
     setIsSubmitting(true);
-    
+
+    const parsed = customizationFormSchema.safeParse({
+      name,
+      instagramTelegramId,
+      callingNumber,
+      whatsappNumber,
+      alternativeNumber,
+      photos,
+      videoDriveLink,
+    });
+
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || 'Please check your details');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const v = parsed.data;
+    // IMPORTANT: Firebase RTDB rejects `undefined` values; omit optional fields instead.
     const formData: CustomizationFormData = {
-      name: name.trim(),
-      instagramTelegramId: instagramTelegramId.trim() || undefined,
-      callingNumber: callingNumber.trim(),
-      whatsappNumber: whatsappNumber.trim(),
-      alternativeNumber: alternativeNumber.trim() || undefined,
-      photos: photos.length > 0 ? photos : undefined,
-      videoDriveLink: videoDriveLink.trim() || undefined,
+      name: v.name,
+      callingNumber: v.callingNumber,
+      whatsappNumber: v.whatsappNumber,
       submittedAt: Date.now(),
+      ...(v.instagramTelegramId?.trim() ? { instagramTelegramId: v.instagramTelegramId.trim() } : {}),
+      ...(v.alternativeNumber?.trim() ? { alternativeNumber: v.alternativeNumber.trim() } : {}),
+      ...(v.photos && v.photos.length > 0 ? { photos: v.photos } : {}),
+      ...(v.videoDriveLink?.trim() ? { videoDriveLink: v.videoDriveLink.trim() } : {}),
     };
 
     try {
@@ -138,7 +154,8 @@ const CustomizationFormPage = () => {
       
       setShowSuccess(true);
     } catch (error) {
-      toast.error('Failed to submit form');
+      console.error('Customization form submit failed:', error);
+      toast.error((error as any)?.message || 'Failed to submit form');
     } finally {
       setIsSubmitting(false);
     }
