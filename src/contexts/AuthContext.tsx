@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check Firebase for added admins
     try {
-      const adminsRef = ref(database, 'admins');
+      const adminsRef = ref(database, 'adminUsers');
       const snapshot = await get(adminsRef);
       
       if (snapshot.exists()) {
