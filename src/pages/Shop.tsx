@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import CustomProjectForm from '@/components/CustomProjectForm';
+import CustomProjectPopup from '@/components/CustomProjectPopup';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
@@ -19,6 +20,7 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [showCustomProjectPopup, setShowCustomProjectPopup] = useState(false);
   const [cart, setCart] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,23 @@ const Index = () => {
   const [filterType, setFilterType] = useState<'all' | 'course' | 'website'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const customProjectRef = useRef<HTMLDivElement>(null);
+
+  // Show popup on mount (once per session)
+  useEffect(() => {
+    const hasSeenPopup = sessionStorage.getItem('hasSeenCustomProjectPopup');
+    if (!hasSeenPopup) {
+      const timer = setTimeout(() => {
+        setShowCustomProjectPopup(true);
+        sessionStorage.setItem('hasSeenCustomProjectPopup', 'true');
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const scrollToCustomProject = () => {
+    customProjectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleAddToCart = (product: Product) => {
     setCart((prev) => [...prev, product]);
@@ -363,7 +382,9 @@ const Index = () => {
           </section>
 
           {/* Custom Project Section */}
-          <CustomProjectForm onAuthRequired={() => setShowAuthModal(true)} />
+          <div ref={customProjectRef}>
+            <CustomProjectForm onAuthRequired={() => setShowAuthModal(true)} />
+          </div>
         </main>
 
         <Footer />
@@ -371,6 +392,11 @@ const Index = () => {
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         <ProfilePanel isOpen={showProfilePanel} onClose={() => setShowProfilePanel(false)} />
         <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cart={cart} onRemove={handleRemoveFromCart} onAuthRequired={() => setShowAuthModal(true)} onProfileOpen={() => setShowProfilePanel(true)} />
+        <CustomProjectPopup 
+          isOpen={showCustomProjectPopup} 
+          onClose={() => setShowCustomProjectPopup(false)} 
+          onYes={scrollToCustomProject}
+        />
       </div>
     </AuthProvider>
   );

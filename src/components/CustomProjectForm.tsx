@@ -63,6 +63,9 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
     }
   };
 
+  // Auto-fill email from logged-in user
+  const userEmail = user?.email || '';
+
   return (
     <section id="custom" className="py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
@@ -77,6 +80,23 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 bg-card p-6 rounded-2xl shadow-card">
+            {/* Email - Pre-filled and readonly */}
+            <div className="space-y-2">
+              <Label htmlFor="project-email">Account Email</Label>
+              <Input
+                id="project-email"
+                type="email"
+                value={userEmail}
+                disabled
+                className="bg-secondary/50 cursor-not-allowed"
+              />
+              {!user && (
+                <p className="text-xs text-muted-foreground">
+                  Please <button type="button" onClick={onAuthRequired} className="text-primary hover:underline">login</button> to submit a request
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="project-title">Project Title</Label>
               <Input

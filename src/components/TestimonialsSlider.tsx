@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { Testimonial } from '@/types';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 
 const TestimonialsSlider = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,15 +72,38 @@ const TestimonialsSlider = () => {
 
   const displayTestimonials = testimonials.length > 0 ? testimonials : demoTestimonials;
 
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (scrollRef.current) {
+      const container = scrollRef.current;
       const scrollAmount = 320;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      const currentScroll = container.scrollLeft;
+
+      // If scrolling right and at the end, go back to start
+      if (direction === 'right' && currentScroll >= maxScroll - 10) {
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else if (direction === 'left' && currentScroll <= 10) {
+        // If scrolling left and at the start, go to end
+        container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+      } else {
+        container.scrollBy({
+          left: direction === 'left' ? -scrollAmount : scrollAmount,
+          behavior: 'smooth',
+        });
+      }
     }
-  };
+  }, []);
+
+  // Auto-slide every 3 seconds
+  useEffect(() => {
+    if (displayTestimonials.length <= 1 || isPaused) return;
+    
+    const timer = setInterval(() => {
+      scroll('right');
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [displayTestimonials.length, isPaused, scroll]);
 
   return (
     <section className="py-10 bg-background">
@@ -117,6 +141,10 @@ const TestimonialsSlider = () => {
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4 snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
         >
           {displayTestimonials.map((testimonial) => (
             <div
