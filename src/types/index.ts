@@ -1,3 +1,5 @@
+export type ImageAspectRatio = '1:1' | '4:5' | '5:4' | '3:4' | '4:3' | '9:16' | '16:9' | '2:3' | '3:2';
+
 export interface Product {
   id: string;
   title: string;
@@ -18,6 +20,8 @@ export interface Product {
   isOutOfStock?: boolean;
   /** Which price should be shown as the main price on cards/details when dual buttons exist */
   displayPriceFrom?: 'base' | 'left' | 'right';
+  /** Image aspect ratio for product images */
+  imageAspectRatio?: ImageAspectRatio;
   // Dual pricing configuration
   leftButton?: {
     label?: string;

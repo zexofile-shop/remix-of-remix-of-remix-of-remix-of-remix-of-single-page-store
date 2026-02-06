@@ -16,6 +16,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from '@/services/paymentService';
 import { getMainDisplayPricing } from '@/lib/productPricing';
+import { getAspectRatioClass } from '@/lib/aspectRatio';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -276,7 +277,7 @@ const ProductDetail = () => {
           {/* Product Image/Video Carousel */}
           <div className="space-y-3">
             <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-secondary/30 border border-border">
+              <div className={`${getAspectRatioClass(product.imageAspectRatio)} rounded-2xl overflow-hidden bg-secondary/30 border border-border`}>
                 {isVideoSlide ? (
                   <div className="w-full h-full flex items-center justify-center bg-black">
                     <iframe
@@ -294,7 +295,7 @@ const ProductDetail = () => {
                   <img
                     src={allImages[currentScreenshotIndex] || product.image}
                     alt={product.title}
-                    className="w-full h-full object-contain bg-secondary/20"
+                    className="w-full h-full object-cover bg-secondary/20"
                   />
                 )}
               </div>

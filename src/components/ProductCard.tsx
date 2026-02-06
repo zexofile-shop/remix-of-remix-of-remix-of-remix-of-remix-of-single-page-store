@@ -2,6 +2,7 @@ import { Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types';
 import { getMainDisplayPricing } from '@/lib/productPricing';
+import { getAspectRatioClass } from '@/lib/aspectRatio';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
 
   const isOutOfStock = !!product.isOutOfStock;
   const mainPricing = getMainDisplayPricing(product);
+  const aspectClass = getAspectRatioClass(product.imageAspectRatio);
   
   const hasDiscount = !!(mainPricing.originalPrice && mainPricing.originalPrice > mainPricing.price);
   const discountPercentage = hasDiscount 
@@ -45,11 +47,11 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
       }`}
       onClick={handleCardClick}
     >
-      <div className="relative aspect-[4/3] overflow-hidden gradient-card bg-secondary/30">
+      <div className={`relative ${aspectClass} overflow-hidden gradient-card bg-secondary/30`}>
         <img
           src={product.image}
           alt={product.title}
-          className="w-full h-full object-contain bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
         />
         {isOutOfStock && (
           <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground font-bold">
