@@ -69,9 +69,9 @@ const HeroSlider = () => {
   return (
     <section className="relative w-full overflow-hidden bg-background mt-4 md:mt-6">
       {/* Main Slider Container */}
-      <div className="relative w-full max-w-7xl mx-auto px-2 md:px-4">
-        {/* Slides */}
-        <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 shadow-xl">
+      <div className="relative w-full max-w-7xl mx-auto px-2 md:px-4 lg:px-6">
+        {/* Slides - Fixed aspect ratio for PC, responsive for mobile */}
+        <div className="relative w-full aspect-[16/9] sm:aspect-[18/9] md:aspect-[21/9] lg:aspect-[2.5/1] xl:aspect-[2.8/1] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 shadow-xl">
           {displaySlides.map((slide, index) => (
             <div
               key={slide.id}
@@ -84,11 +84,12 @@ const HeroSlider = () => {
               }`}
               style={{ visibility: Math.abs(index - currentIndex) <= 1 ? 'visible' : 'hidden' }}
             >
-              {/* Image */}
+              {/* Image - object-contain on larger screens to prevent cutoff */}
               <img
                 src={slide.imageUrl}
                 alt={slide.title || `Slide ${index + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover md:object-contain lg:object-cover"
+                style={{ objectPosition: 'center' }}
               />
               
               {/* Very Subtle Gradient Overlay */}
