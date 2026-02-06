@@ -32,38 +32,37 @@ const CustomProjectPopup = ({ isOpen, onClose, onYes }: CustomProjectPopupProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-2 border-primary/20 bg-gradient-to-b from-background via-background to-secondary/30">
+      <DialogContent className="max-w-[90%] sm:max-w-sm p-0 overflow-hidden border-2 border-primary/20 bg-gradient-to-b from-background via-background to-secondary/30 rounded-2xl mx-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-full p-1.5 bg-secondary/80 hover:bg-secondary transition-colors"
+          className="absolute right-3 top-3 z-10 rounded-full p-1.5 bg-secondary/80 hover:bg-secondary transition-colors"
         >
           <X className="h-4 w-4 text-muted-foreground" />
         </button>
 
         {/* Decorative Header */}
-        <div className="relative pt-8 pb-4 px-6 text-center overflow-hidden">
-          {/* Floating sparkles animation */}
+        <div className="relative pt-6 pb-3 px-5 text-center overflow-hidden">
+          {/* Floating sparkles - no animation */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <Sparkles className="absolute top-4 left-8 h-4 w-4 text-primary/40 animate-pulse" />
-            <Star className="absolute top-12 right-12 h-3 w-3 text-gold/50 animate-pulse" style={{ animationDelay: '0.5s' }} />
-            <Sparkles className="absolute bottom-8 right-8 h-5 w-5 text-primary/30 animate-pulse" style={{ animationDelay: '1s' }} />
-            <Star className="absolute bottom-4 left-16 h-4 w-4 text-gold/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <Sparkles className="absolute top-4 left-6 h-3 w-3 text-primary/40" />
+            <Star className="absolute top-10 right-10 h-2.5 w-2.5 text-gold/50" />
+            <Sparkles className="absolute bottom-6 right-6 h-4 w-4 text-primary/30" />
+            <Star className="absolute bottom-3 left-12 h-3 w-3 text-gold/40" />
           </div>
 
-          {/* Main Icon */}
-          <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4">
-            <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-50" />
-            <Sparkles className="h-10 w-10 text-primary" />
+          {/* Main Icon - no animation */}
+          <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+            <Sparkles className="h-7 w-7 text-primary" />
           </div>
 
           <DialogHeader>
-            <DialogTitle className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+            <DialogTitle className="text-xl md:text-2xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
               Build Your Dream Website!
             </DialogTitle>
           </DialogHeader>
 
-          <p className="text-muted-foreground mt-3 text-sm md:text-base leading-relaxed">
+          <p className="text-muted-foreground mt-2 text-xs md:text-sm leading-relaxed">
             Have a unique idea? Let us bring it to life with a 
             <span className="text-primary font-semibold"> custom-made website </span>
             just for you!
@@ -71,46 +70,43 @@ const CustomProjectPopup = ({ isOpen, onClose, onYes }: CustomProjectPopupProps)
         </div>
 
         {/* Features Grid */}
-        <div className="px-6 pb-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="px-5 pb-3">
+          <div className="grid grid-cols-2 gap-2">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`flex items-center gap-2 p-3 rounded-xl bg-secondary/50 border border-border/50 transition-all duration-300 ${
-                  isAnimating ? 'animate-fade-in' : ''
-                }`}
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="flex items-center gap-2 p-2.5 rounded-lg bg-secondary/50 border border-border/50"
               >
-                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <div className="flex-shrink-0 w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary">
                   {feature.icon}
                 </div>
-                <span className="text-xs md:text-sm font-medium text-foreground">{feature.text}</span>
+                <span className="text-[11px] md:text-xs font-medium text-foreground">{feature.text}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* CTA Section */}
-        <div className="px-6 pb-6 pt-2 space-y-3">
+        <div className="px-5 pb-5 pt-1 space-y-2">
           <Button
             onClick={handleYes}
-            size="lg"
-            className="w-full rounded-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-primary/25 transition-all duration-300 hover:scale-[1.02]"
+            size="default"
+            className="w-full rounded-full h-10 text-sm font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-primary/25 transition-all duration-300 hover:scale-[1.02]"
           >
-            <Sparkles className="h-5 w-5 mr-2" />
+            <Sparkles className="h-4 w-4 mr-2" />
             Yes, I Want a Custom Website!
           </Button>
           
           <button
             onClick={onClose}
-            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
           >
             Maybe later, just browsing
           </button>
         </div>
 
         {/* Bottom Accent */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
       </DialogContent>
     </Dialog>
   );

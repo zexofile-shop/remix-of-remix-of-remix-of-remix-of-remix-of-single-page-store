@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
 import { database, ADMIN_EMAIL } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product, CustomProject, Purchase, Testimonial, SupportChannels, OrderSubmission } from '@/types';
+import { Product, CustomProject, Purchase, Testimonial, SupportChannels, OrderSubmission, ImageAspectRatio } from '@/types';
 import { Coupon, ContactMessage } from '@/types/coupon';
 import { AdminUser, AdminPermissions, DEFAULT_PERMISSIONS, FULL_PERMISSIONS, PERMISSION_LABELS } from '@/types/admin';
 import { Button } from '@/components/ui/button';
@@ -289,6 +289,7 @@ const Admin = () => {
   const [isFreeResource, setIsFreeResource] = useState(false);
   const [allowCustomization, setAllowCustomization] = useState(false);
   const [isOutOfStock, setIsOutOfStock] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState<ImageAspectRatio>('4:3');
   
   // Dual button configuration
   const [enableDualButtons, setEnableDualButtons] = useState(false);
@@ -500,6 +501,7 @@ const Admin = () => {
     setIsFreeResource(false);
     setAllowCustomization(false);
     setIsOutOfStock(false);
+    setImageAspectRatio('4:3');
     setEditingProduct(null);
     // Reset dual button config
     setEnableDualButtons(false);
@@ -537,6 +539,7 @@ const Admin = () => {
       isFreeResource: priceNum === 0 ? isFreeResource : false,
       allowCustomization,
       isOutOfStock,
+      imageAspectRatio,
       displayPriceFrom: enableDualButtons ? displayPriceFrom : 'base',
       createdAt: Date.now(),
     };
@@ -602,6 +605,7 @@ const Admin = () => {
     setIsFreeResource(product.isFreeResource || false);
     setAllowCustomization(product.allowCustomization || false);
     setIsOutOfStock(product.isOutOfStock || false);
+    setImageAspectRatio(product.imageAspectRatio || '4:3');
     // Load dual button config
     if (product.leftButton || product.rightButton) {
       setEnableDualButtons(true);
@@ -1231,6 +1235,24 @@ const Admin = () => {
                   <div className="col-span-full space-y-1">
                     <Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3" />Main Image *</Label>
                     <ImageUploadField value={image} onChange={setImage} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Image Aspect Ratio</Label>
+                    <Select value={imageAspectRatio} onValueChange={(v) => setImageAspectRatio(v as ImageAspectRatio)}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1:1">1:1 (Square)</SelectItem>
+                        <SelectItem value="4:3">4:3 (Standard)</SelectItem>
+                        <SelectItem value="3:4">3:4 (Portrait)</SelectItem>
+                        <SelectItem value="16:9">16:9 (Widescreen)</SelectItem>
+                        <SelectItem value="9:16">9:16 (Vertical)</SelectItem>
+                        <SelectItem value="4:5">4:5 (Instagram)</SelectItem>
+                        <SelectItem value="5:4">5:4 (Landscape)</SelectItem>
+                        <SelectItem value="3:2">3:2 (Photo)</SelectItem>
+                        <SelectItem value="2:3">2:3 (Tall)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">Images will fit this ratio on shop & product pages.</p>
                   </div>
                   <div className="col-span-full space-y-1">
                     <Label className="text-xs flex items-center gap-1"><Images className="h-3 w-3" />Screenshots</Label>
