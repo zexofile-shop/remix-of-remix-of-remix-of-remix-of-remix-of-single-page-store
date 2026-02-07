@@ -10,16 +10,18 @@ import { useNavigate } from 'react-router-dom';
 interface ProductCardProps {
   product: Product;
   onBuy: (product: Product) => void;
+  uniformSize?: boolean; // Force uniform aspect ratio for grid displays
 }
 
-const ProductCard = ({ product, onBuy }: ProductCardProps) => {
+const ProductCard = ({ product, onBuy, uniformSize = false }: ProductCardProps) => {
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const inWishlist = isInWishlist(product.id);
 
   const isOutOfStock = !!product.isOutOfStock;
   const mainPricing = getMainDisplayPricing(product);
-  const aspectClass = getAspectRatioClass(product.imageAspectRatio);
+  // Use uniform square aspect ratio for grid displays, otherwise use product's configured ratio
+  const aspectClass = uniformSize ? 'aspect-square' : getAspectRatioClass(product.imageAspectRatio);
   
   const hasDiscount = !!(mainPricing.originalPrice && mainPricing.originalPrice > mainPricing.price);
   const discountPercentage = hasDiscount 
@@ -42,7 +44,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
 
   return (
     <div 
-      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 group cursor-pointer ${
+      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 group cursor-pointer h-full flex flex-col ${
         isOutOfStock ? 'opacity-80' : ''
       }`}
       onClick={handleCardClick}
@@ -79,7 +81,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
         </button>
       </div>
       
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         <h3 className="font-semibold text-foreground text-sm mb-1 line-clamp-2">
           {product.title}
         </h3>
@@ -87,7 +89,7 @@ const ProductCard = ({ product, onBuy }: ProductCardProps) => {
           {product.description}
         </p>
         
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap mt-auto">
           {product.price === 0 && product.isFreeResource ? (
             <>
               <span className="font-bold text-green-600">FREE</span>

@@ -9,12 +9,12 @@ import Header from '@/components/Header';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
-import { Product } from '@/types';
+import { Product, CartItem } from '@/types';
 import { toast } from 'sonner';
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -23,14 +23,14 @@ const Landing = () => {
     navigate(`/product/${product.id}`);
   };
 
-  const handleRemoveFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((p) => p.id !== productId));
+  const handleRemoveFromCart = (index: number) => {
+    setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header
-        cartCount={cart.length}
+        cartCount={cartItems.length}
         onCartClick={() => setIsCartOpen(true)}
         onAuthClick={() => setIsAuthOpen(true)}
         onProfileClick={() => setIsProfileOpen(true)}
@@ -64,7 +64,7 @@ const Landing = () => {
       <CartModal
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        cart={cart}
+        cartItems={cartItems}
         onRemove={handleRemoveFromCart}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />

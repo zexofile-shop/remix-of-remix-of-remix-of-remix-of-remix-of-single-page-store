@@ -103,7 +103,7 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
           <div className="grid grid-cols-2 gap-4 md:gap-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-card rounded-2xl p-4 shadow-card">
-                <Skeleton className="w-full aspect-[4/3] rounded-xl mb-4" />
+                <Skeleton className="w-full aspect-square rounded-xl mb-4" />
                 <Skeleton className="h-5 w-3/4 mb-2" />
                 <Skeleton className="h-4 w-full mb-4" />
                 <Skeleton className="h-10 w-full" />
@@ -115,10 +115,10 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
             {productsToShow.map((product, index) => (
               <div
                 key={product.id}
-                className="animate-slide-up"
+                className="animate-slide-up h-full"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <ProductCard product={product} onBuy={onBuy} />
+                <ProductCard product={product} onBuy={onBuy} uniformSize />
               </div>
             ))}
           </div>
