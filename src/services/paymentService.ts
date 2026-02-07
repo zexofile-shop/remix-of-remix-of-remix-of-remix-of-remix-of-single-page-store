@@ -63,22 +63,27 @@ export const initiatePayment = async (
       color: '#6366f1',
     },
     handler: async (response: RazorpayPaymentResponse) => {
+      console.log('Razorpay payment success, payment ID:', response.razorpay_payment_id);
       try {
         // Save purchase to Firebase
+        console.log('Saving purchase to database...');
         const purchase = await savePurchase(
           product, 
           user, 
           response.razorpay_payment_id,
           couponData
         );
+        console.log('Purchase saved successfully:', purchase.id);
         
         // Update coupon usage if a coupon was used
         if (couponData) {
+          console.log('Updating coupon usage...');
           await updateCouponUsage(couponData.couponId, user.uid, user.email || '');
         }
         
         onSuccess(purchase);
       } catch (error) {
+        console.error('Failed to save purchase:', error);
         onFailure('Payment successful but failed to save purchase. Please contact support.');
       }
     },
@@ -117,11 +122,19 @@ const savePurchase = async (
   razorpayPaymentId: string,
   couponData?: { couponId: string; couponCode: string; discount: number }
 ): Promise<PurchaseRecord> => {
+  console.log('savePurchase called with:', { 
+    productId: product.id, 
+    userId: user.uid, 
+    razorpayPaymentId,
+    hasCoupon: !!couponData 
+  });
+  
   const purchasesRef = ref(database, 'purchases');
   const newPurchaseRef = push(purchasesRef);
   
   const finalAmount = product.price - (couponData?.discount || 0);
   
+  // Build purchase record - ensure no undefined values
   const purchase: PurchaseRecord = {
     userId: user.uid,
     userEmail: user.email || '',
@@ -131,14 +144,22 @@ const savePurchase = async (
     productType: product.type,
     deliveryLink: product.deliveryLink || product.razorpayLink || '',
     amount: finalAmount,
-    originalAmount: couponData ? product.price : undefined,
-    couponCode: couponData?.couponCode,
-    couponDiscount: couponData?.discount,
     razorpayPaymentId,
     purchaseDate: Date.now(),
   };
 
+  // Only add coupon fields if coupon was used
+  if (couponData) {
+    purchase.originalAmount = product.price;
+    purchase.couponCode = couponData.couponCode;
+    purchase.couponDiscount = couponData.discount;
+  }
+
+  console.log('Saving purchase record:', purchase);
+  
   await set(newPurchaseRef, purchase);
+  
+  console.log('Purchase saved with ID:', newPurchaseRef.key);
   
   return { ...purchase, id: newPurchaseRef.key! };
 };
