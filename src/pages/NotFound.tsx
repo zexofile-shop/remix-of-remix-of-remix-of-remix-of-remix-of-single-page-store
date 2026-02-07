@@ -66,8 +66,8 @@ const NotFound = () => {
 
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4">
-        {/* Logo */}
-        <div className="mb-8 animate-bounce-slow">
+        {/* Logo - Static, no animation */}
+        <div className="mb-8">
           <img 
             src={zexofileLogo} 
             alt="ZexoFile" 

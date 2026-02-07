@@ -14,7 +14,8 @@ import {
   Instagram,
   Facebook,
   Twitter,
-  Youtube
+  Youtube,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ interface SiteContent {
   socialFacebook?: string;
   socialTwitter?: string;
   socialYoutube?: string;
+  socialWhatsapp?: string;
 }
 
 const InfoSectionsCompact = () => {
@@ -227,7 +229,12 @@ const InfoSectionsCompact = () => {
                     <Youtube className="h-4 w-4" />
                   </a>
                 )}
-                {!siteContent.socialInstagram && !siteContent.socialFacebook && !siteContent.socialTwitter && !siteContent.socialYoutube && (
+                {siteContent.socialWhatsapp && (
+                  <a href={siteContent.socialWhatsapp} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                    <MessageCircle className="h-4 w-4" />
+                  </a>
+                )}
+                {!siteContent.socialInstagram && !siteContent.socialFacebook && !siteContent.socialTwitter && !siteContent.socialYoutube && !siteContent.socialWhatsapp && (
                   <>
                     <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                       <Instagram className="h-4 w-4" />

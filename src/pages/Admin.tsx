@@ -55,6 +55,7 @@ interface SiteContent {
   socialFacebook?: string;
   socialTwitter?: string;
   socialYoutube?: string;
+  socialWhatsapp?: string;
 }
 
 interface UserData {
@@ -1426,7 +1427,54 @@ const Admin = () => {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
-            <h3 className="font-semibold">User Purchase Statistics</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">User Analytics</h3>
+              <Badge variant="outline" className="text-xs">
+                {allUsers.length} Total Users
+              </Badge>
+            </div>
+
+            {/* All Users List */}
+            <div className="space-y-3 mb-6">
+              <h4 className="text-sm font-medium text-muted-foreground">All Registered Users</h4>
+              <div className="max-h-[300px] overflow-y-auto border border-border rounded-xl">
+                {allUsers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Email</TableHead>
+                        <TableHead className="text-xs">Joined</TableHead>
+                        <TableHead className="text-xs">Purchases</TableHead>
+                        <TableHead className="text-xs">Total Spent</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allUsers.map((user) => {
+                        const userPurchases = allPurchases.filter(p => p.userId === user.id);
+                        const totalSpent = userPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="text-xs font-medium">{user.email}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-xs">{userPurchases.length}</TableCell>
+                            <TableCell className="text-xs font-semibold text-green-600">
+                              ₹{totalSpent.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-center text-muted-foreground py-6 text-sm">No users registered yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* User Purchase Statistics */}
+            <h4 className="text-sm font-medium text-muted-foreground">Top Buyers</h4>
             <div className="space-y-3">
               {userStats.map((stats, idx) => (
                 <div key={idx} className="p-4 bg-card border border-border rounded-xl">
@@ -1749,6 +1797,10 @@ const Admin = () => {
                 <div className="space-y-1">
                   <Label className="text-xs">YouTube</Label>
                   <Input value={siteContent.socialYoutube || ''} onChange={(e) => setSiteContent({...siteContent, socialYoutube: e.target.value})} className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">WhatsApp Channel</Label>
+                  <Input value={siteContent.socialWhatsapp || ''} onChange={(e) => setSiteContent({...siteContent, socialWhatsapp: e.target.value})} placeholder="https://wa.me/..." className="h-9 text-sm" />
                 </div>
               </div>
               <Button className="w-full mt-4" onClick={async () => {

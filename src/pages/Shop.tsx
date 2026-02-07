@@ -10,7 +10,7 @@ import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
 import CartModal from '@/components/CartModal';
-import { Product } from '@/types';
+import { Product, CartItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +21,7 @@ const Index = () => {
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
   const [showCustomProjectPopup, setShowCustomProjectPopup] = useState(false);
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,11 +47,17 @@ const Index = () => {
   };
 
   const handleAddToCart = (product: Product) => {
-    setCart((prev) => [...prev, product]);
+    const newItem: CartItem = {
+      product,
+      selectedOption: 'left',
+      price: product.price,
+      label: 'Source Code'
+    };
+    setCartItems((prev) => [...prev, newItem]);
   };
 
-  const handleRemoveFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((p) => p.id !== productId));
+  const handleRemoveFromCart = (index: number) => {
+    setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -391,7 +397,7 @@ const Index = () => {
 
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         <ProfilePanel isOpen={showProfilePanel} onClose={() => setShowProfilePanel(false)} />
-        <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cart={cart} onRemove={handleRemoveFromCart} onAuthRequired={() => setShowAuthModal(true)} onProfileOpen={() => setShowProfilePanel(true)} />
+        <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cartItems={cartItems} onRemove={handleRemoveFromCart} onAuthRequired={() => setShowAuthModal(true)} onProfileOpen={() => setShowProfilePanel(true)} />
         <CustomProjectPopup 
           isOpen={showCustomProjectPopup} 
           onClose={() => setShowCustomProjectPopup(false)} 

@@ -70,7 +70,7 @@ const Login = () => {
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-white">
-          <div className="mb-8 animate-float">
+          <div className="mb-8">
             <img src={zexofileLogo} alt="ZexoFile" className="h-24 w-24 object-contain" />
           </div>
           <h1 className="text-4xl font-bold mb-4 text-center">ZexoFile Shop</h1>

@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product } from '@/types';
+import { Product, CartItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2, Package, Palette } from 'lucide-react';
 import Header from '@/components/Header';
 import CartModal from '@/components/CartModal';
+import CartOptionDialog from '@/components/CartOptionDialog';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
 import PaymentSuccessModal from '@/components/PaymentSuccessModal';
@@ -25,13 +26,14 @@ const ProductDetail = () => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentScreenshotIndex, setCurrentScreenshotIndex] = useState(0);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCartOptionDialog, setShowCartOptionDialog] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<PurchaseRecord | null>(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(true);
@@ -118,9 +120,50 @@ const ProductDetail = () => {
     }
     
     if (product) {
-      setCart((prev) => [...prev, product]);
-      toast.success(`${product.title} added to cart!`);
+      // Check if product has dual pay options
+      const hasDualOptions = !!(product.rightButton || product.allowCustomization);
+      
+      if (hasDualOptions) {
+        // Show cart option dialog for dual-pay products
+        setShowCartOptionDialog(true);
+      } else {
+        // Single option - add directly
+        const newItem: CartItem = {
+          product,
+          selectedOption: 'left',
+          price: product.price,
+          label: 'Source Code'
+        };
+        setCartItems((prev) => [...prev, newItem]);
+        toast.success(`${product.title} added to cart!`);
+      }
     }
+  };
+
+  const handleCartOptionSelect = (option: 'left' | 'right') => {
+    if (!product) return;
+    
+    let price: number;
+    let label: string;
+    
+    if (option === 'left') {
+      price = product.leftButton?.price ?? product.price;
+      label = product.leftButton?.label || 'Source Code';
+    } else {
+      price = product.rightButton?.price ?? product.price;
+      label = product.rightButton?.label || 'Get Customized';
+    }
+    
+    const newItem: CartItem = {
+      product,
+      selectedOption: option,
+      price,
+      label
+    };
+    
+    setCartItems((prev) => [...prev, newItem]);
+    setShowCartOptionDialog(false);
+    toast.success(`${product.title} (${label}) added to cart!`);
   };
 
   const handlePayment = (type: 'left' | 'right') => {
@@ -171,8 +214,8 @@ const ProductDetail = () => {
     }
   };
 
-  const handleRemoveFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((p) => p.id !== productId));
+  const handleRemoveFromCart = (index: number) => {
+    setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   // NOTE: main pricing (shown on page) can be configured separately for dual buttons
@@ -256,7 +299,7 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header
-        cartCount={cart.length}
+        cartCount={cartItems.length}
         onCartClick={() => setIsCartOpen(true)}
         onAuthClick={() => setIsAuthOpen(true)}
         onProfileClick={() => setIsProfileOpen(true)}
@@ -338,38 +381,40 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Thumbnails (including video) */}
+            {/* Thumbnails (including video) - Scrollable container */}
             {totalMediaItems > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {allImages.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentScreenshotIndex(index)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                      index === currentScreenshotIndex 
-                        ? 'border-primary' 
-                        : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-                {hasVideo && (
-                  <button
-                    onClick={() => setCurrentScreenshotIndex(allImages.length)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex items-center justify-center bg-black ${
-                      isVideoSlide 
-                        ? 'border-primary' 
-                        : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <Play className="h-6 w-6 text-white fill-white" />
-                  </button>
-                )}
+              <div className="relative">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-transparent">
+                  {allImages.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentScreenshotIndex(index)}
+                      className={`flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        index === currentScreenshotIndex 
+                          ? 'border-primary' 
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Screenshot ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                  {hasVideo && (
+                    <button
+                      onClick={() => setCurrentScreenshotIndex(allImages.length)}
+                      className={`flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden border-2 transition-all flex items-center justify-center bg-black ${
+                        isVideoSlide 
+                          ? 'border-primary' 
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <Play className="h-5 w-5 md:h-6 md:w-6 text-white fill-white" />
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -558,8 +603,14 @@ const ProductDetail = () => {
       <CartModal
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        cart={cart}
+        cartItems={cartItems}
         onRemove={handleRemoveFromCart}
+      />
+      <CartOptionDialog
+        isOpen={showCartOptionDialog}
+        onClose={() => setShowCartOptionDialog(false)}
+        product={product}
+        onSelectOption={handleCartOptionSelect}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ProfilePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />

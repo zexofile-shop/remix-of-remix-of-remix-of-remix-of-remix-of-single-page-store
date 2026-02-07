@@ -39,6 +39,13 @@ export interface Product {
   createdAt: number;
 }
 
+export interface CartItem {
+  product: Product;
+  selectedOption: 'left' | 'right';
+  price: number;
+  label: string;
+}
+
 export interface Purchase {
   id: string;
   userId: string;
