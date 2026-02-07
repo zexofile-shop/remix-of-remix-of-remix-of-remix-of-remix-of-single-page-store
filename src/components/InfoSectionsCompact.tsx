@@ -13,7 +13,8 @@ import {
   Phone,
   Instagram,
   Facebook,
-  Twitter
+  Twitter,
+  Youtube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ interface SiteContent {
   socialInstagram?: string;
   socialFacebook?: string;
   socialTwitter?: string;
+  socialYoutube?: string;
 }
 
 const InfoSectionsCompact = () => {
@@ -220,7 +222,12 @@ const InfoSectionsCompact = () => {
                     <Twitter className="h-4 w-4" />
                   </a>
                 )}
-                {!siteContent.socialInstagram && !siteContent.socialFacebook && !siteContent.socialTwitter && (
+                {siteContent.socialYoutube && (
+                  <a href={siteContent.socialYoutube} target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                    <Youtube className="h-4 w-4" />
+                  </a>
+                )}
+                {!siteContent.socialInstagram && !siteContent.socialFacebook && !siteContent.socialTwitter && !siteContent.socialYoutube && (
                   <>
                     <a href="#" className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                       <Instagram className="h-4 w-4" />

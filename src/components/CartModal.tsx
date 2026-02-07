@@ -53,6 +53,7 @@ const CartModal = ({ isOpen, onClose, cart, onRemove, onAuthRequired, onProfileO
       const product = cart[index];
       
       try {
+        console.log('CartModal: Initiating payment for product:', product.id);
         await initiatePayment(
           product,
           {
@@ -61,6 +62,7 @@ const CartModal = ({ isOpen, onClose, cart, onRemove, onAuthRequired, onProfileO
             displayName: user.displayName,
           },
           (purchase) => {
+            console.log('CartModal: Payment successful, purchase:', purchase.id);
             setLastPurchase(purchase);
             setShowSuccessModal(true);
             onRemove(product.id);
@@ -72,11 +74,13 @@ const CartModal = ({ isOpen, onClose, cart, onRemove, onAuthRequired, onProfileO
             }
           },
           (error) => {
+            console.error('CartModal: Payment failed:', error);
             toast.error(error);
             setIsProcessing(false);
           }
         );
       } catch (error) {
+        console.error('CartModal: Payment exception:', error);
         toast.error('Payment failed. Please try again.');
         setIsProcessing(false);
       }
