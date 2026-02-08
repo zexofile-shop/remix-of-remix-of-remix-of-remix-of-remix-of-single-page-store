@@ -43,7 +43,7 @@ const CartOptionDialog = ({ isOpen, onClose, product, onSelectOption }: CartOpti
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle className="text-center">Choose Option</DialogTitle>
         </DialogHeader>
