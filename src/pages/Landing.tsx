@@ -9,22 +9,18 @@ import Header from '@/components/Header';
 import CartModal from '@/components/CartModal';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
-import { Product, CartItem } from '@/types';
-import { toast } from 'sonner';
+import { Product } from '@/types';
+import { useCart } from '@/contexts/CartContext';
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { cartItems, removeFromCart } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleBuy = (product: Product) => {
     navigate(`/product/${product.id}`);
-  };
-
-  const handleRemoveFromCart = (index: number) => {
-    setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -35,7 +31,7 @@ const Landing = () => {
         onAuthClick={() => setIsAuthOpen(true)}
         onProfileClick={() => setIsProfileOpen(true)}
       />
-      
+
       {/* Hero Slider */}
       <HeroSlider />
 
@@ -65,7 +61,7 @@ const Landing = () => {
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         cartItems={cartItems}
-        onRemove={handleRemoveFromCart}
+        onRemove={removeFromCart}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ProfilePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
@@ -74,3 +70,4 @@ const Landing = () => {
 };
 
 export default Landing;
+

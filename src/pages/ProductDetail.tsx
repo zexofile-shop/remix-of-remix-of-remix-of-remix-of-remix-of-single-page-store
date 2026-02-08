@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Product, CartItem } from '@/types';
+import { useCart } from '@/contexts/CartContext';
+import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2, Package, Palette } from 'lucide-react';
@@ -19,14 +20,15 @@ import { hasUserPurchasedProduct, PurchaseRecord, saveFreeResourceAccess } from 
 import { getMainDisplayPricing } from '@/lib/productPricing';
 import { getAspectRatioClass } from '@/lib/aspectRatio';
 
+
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { cartItems, addProductToCart, removeFromCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -128,13 +130,7 @@ const ProductDetail = () => {
         setShowCartOptionDialog(true);
       } else {
         // Single option - add directly
-        const newItem: CartItem = {
-          product,
-          selectedOption: 'left',
-          price: product.price,
-          label: 'Source Code'
-        };
-        setCartItems((prev) => [...prev, newItem]);
+        addProductToCart(product, 'left');
         toast.success(`${product.title} added to cart!`);
       }
     }
@@ -142,26 +138,13 @@ const ProductDetail = () => {
 
   const handleCartOptionSelect = (option: 'left' | 'right') => {
     if (!product) return;
-    
-    let price: number;
-    let label: string;
-    
-    if (option === 'left') {
-      price = product.leftButton?.price ?? product.price;
-      label = product.leftButton?.label || 'Source Code';
-    } else {
-      price = product.rightButton?.price ?? product.price;
-      label = product.rightButton?.label || 'Get Customized';
-    }
-    
-    const newItem: CartItem = {
-      product,
-      selectedOption: option,
-      price,
-      label
-    };
-    
-    setCartItems((prev) => [...prev, newItem]);
+
+    const label =
+      option === 'left'
+        ? (product.leftButton?.label || 'Source Code')
+        : (product.rightButton?.label || 'Get Customized');
+
+    addProductToCart(product, option);
     setShowCartOptionDialog(false);
     toast.success(`${product.title} (${label}) added to cart!`);
   };
@@ -212,10 +195,6 @@ const ProductDetail = () => {
     } finally {
       setIsProcessingPayment(false);
     }
-  };
-
-  const handleRemoveFromCart = (index: number) => {
-    setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   // NOTE: main pricing (shown on page) can be configured separately for dual buttons
@@ -604,7 +583,7 @@ const ProductDetail = () => {
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         cartItems={cartItems}
-        onRemove={handleRemoveFromCart}
+        onRemove={removeFromCart}
       />
       <CartOptionDialog
         isOpen={showCartOptionDialog}
