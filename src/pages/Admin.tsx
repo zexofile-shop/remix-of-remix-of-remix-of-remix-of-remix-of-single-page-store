@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
-import { database, ADMIN_EMAIL } from '@/lib/firebase';
+import { database, ADMIN_EMAIL, SUPER_ADMIN_EMAILS } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Product, CustomProject, Purchase, Testimonial, SupportChannels, OrderSubmission, ImageAspectRatio } from '@/types';
 import { Coupon, ContactMessage } from '@/types/coupon';
@@ -330,8 +330,8 @@ const Admin = () => {
   const [adminPermissions, setAdminPermissions] = useState<AdminPermissions>(DEFAULT_PERMISSIONS);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   
-  // Check if current user is super admin
-  const isSuperAdmin = user?.email === ADMIN_EMAIL;
+  // Check if current user is super admin (both emails have full power)
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user?.email || '');
 
   // Calculate real stats
   const totalUsers = allUsers.length;
