@@ -12,6 +12,7 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import PaymentPage from "./pages/PaymentPage";
 import CustomizationFormPage from "./pages/CustomizationFormPage";
+import CartCheckout from "./pages/CartCheckout";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
@@ -98,6 +99,7 @@ const App = () => (
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/payment/:id" element={<PaymentPage />} />
                   <Route path="/customization-form/:productId" element={<CustomizationFormPage />} />
+                  <Route path="/cart-checkout" element={<CartCheckout />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/profile" element={<Profile />} />

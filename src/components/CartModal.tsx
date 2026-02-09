@@ -53,24 +53,8 @@ const CartModal = ({ isOpen, onClose, cartItems, onRemove, onAuthRequired, onPro
       return;
     }
 
-    setIsProcessing(true);
-    
-    // Navigate to first item's payment page
-    // Store remaining items in sessionStorage for sequential processing
-    if (items.length > 0) {
-      const firstItem = items[0];
-      
-      // Store cart items for batch processing
-      sessionStorage.setItem('cartCheckout', JSON.stringify({
-        items: items,
-        currentIndex: 0
-      }));
-      
-      onClose();
-      navigate(`/payment/${firstItem.product.id}?type=${firstItem.selectedOption}&fromCart=true`);
-    }
-    
-    setIsProcessing(false);
+    onClose();
+    navigate('/cart-checkout');
   };
 
   return (

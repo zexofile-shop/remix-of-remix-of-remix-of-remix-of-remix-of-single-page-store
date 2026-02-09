@@ -19,3 +19,9 @@ export const googleProvider = new GoogleAuthProvider();
 export const database = getDatabase(app);
 
 export const ADMIN_EMAIL = "techshivam0616@gmail.com";
+
+// Super Admins - full admin management powers
+export const SUPER_ADMIN_EMAILS = [
+  "techshivam0616@gmail.com",
+  "niteshprakash555@gmail.com"
+];

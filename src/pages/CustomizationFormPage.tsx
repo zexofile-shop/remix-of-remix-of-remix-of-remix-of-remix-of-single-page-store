@@ -31,6 +31,8 @@ const CustomizationFormPage = () => {
   
   const searchParams = new URLSearchParams(location.search);
   const orderId = searchParams.get('orderId');
+  const totalForms = parseInt(searchParams.get('total') || '1', 10);
+  const currentForm = parseInt(searchParams.get('current') || '1', 10);
   
   const [name, setName] = useState('');
   const [instagramTelegramId, setInstagramTelegramId] = useState('');
@@ -152,6 +154,28 @@ const CustomizationFormPage = () => {
         status: 'pending',
       });
       
+      // Check if there are more forms to fill
+      const pendingForms = sessionStorage.getItem('pendingForms');
+      const currentIndex = parseInt(sessionStorage.getItem('currentFormIndex') || '0', 10);
+      
+      if (pendingForms) {
+        const formsList = JSON.parse(pendingForms) as string[];
+        const nextIndex = currentIndex + 1;
+        
+        if (nextIndex < formsList.length) {
+          // Navigate to next form
+          sessionStorage.setItem('currentFormIndex', nextIndex.toString());
+          const [nextProductId, nextOrderId] = formsList[nextIndex].split(':');
+          toast.success(`Form ${currentForm} of ${totalForms} submitted!`);
+          navigate(`/customization-form/${nextProductId}?orderId=${nextOrderId}&total=${formsList.length}&current=${nextIndex + 1}`);
+          return;
+        } else {
+          // All forms done, clean up
+          sessionStorage.removeItem('pendingForms');
+          sessionStorage.removeItem('currentFormIndex');
+        }
+      }
+      
       setShowSuccess(true);
     } catch (error) {
       console.error('Customization form submit failed:', error);
@@ -217,6 +241,11 @@ const CustomizationFormPage = () => {
         <div className="text-center mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Customize Your Order
+            {totalForms > 1 && (
+              <span className="text-lg text-muted-foreground ml-2">
+                ({currentForm} of {totalForms})
+              </span>
+            )}
           </h1>
           {productTitle && (
             <p className="text-muted-foreground">
