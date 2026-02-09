@@ -59,7 +59,8 @@ export const uploadToImgBB = async (file: File): Promise<string> => {
     throw new Error('Image upload failed');
   }
 
-  return result.data.display_url;
+  // Use original URL for best quality instead of display_url
+  return result.data.image.url;
 };
 
 export const uploadBase64ToImgBB = async (base64: string): Promise<string> => {
@@ -85,5 +86,6 @@ export const uploadBase64ToImgBB = async (base64: string): Promise<string> => {
     throw new Error('Image upload failed');
   }
 
-  return result.data.display_url;
+  // Use original URL for best quality instead of display_url
+  return result.data.image.url;
 };

@@ -8,12 +8,16 @@ import { CartItem, OrderSubmission } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Tag, Shield, Truck, Gift, Loader2, Trash2, Palette, ShoppingBag } from 'lucide-react';
+import { 
+  ArrowLeft, CreditCard, Tag, Shield, Truck, Gift, Loader2, Trash2, 
+  Palette, ShoppingBag, Sparkles, CheckCircle2, PartyPopper, Lock
+} from 'lucide-react';
 import Header from '@/components/Header';
 import AuthModal from '@/components/AuthModal';
 import { toast } from 'sonner';
 import { loadRazorpayScript, RAZORPAY_KEY_ID, RazorpayPaymentResponse } from '@/lib/razorpay';
 import zexofileLogo from '@/assets/zexofile-logo.png';
+import confetti from 'canvas-confetti';
 
 const CartCheckout = () => {
   const navigate = useNavigate();
@@ -35,6 +39,24 @@ const CartCheckout = () => {
     item.selectedOption === 'right' && 
     (item.product.rightButton?.showForm || item.product.allowCustomization)
   );
+
+  const triggerConfetti = () => {
+    // Fire confetti from left
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { x: 0.1, y: 0.6 },
+      colors: ['#22c55e', '#16a34a', '#86efac', '#4ade80']
+    });
+    
+    // Fire confetti from right
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { x: 0.9, y: 0.6 },
+      colors: ['#22c55e', '#16a34a', '#86efac', '#4ade80']
+    });
+  };
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -84,6 +106,9 @@ const CartCheckout = () => {
         couponId: coupon.id,
         percentage: coupon.discountPercent,
       });
+      
+      // Trigger celebration
+      triggerConfetti();
       toast.success(`🎉 Coupon applied! You save ₹${discount}`);
     } catch (error) {
       toast.error('Failed to apply coupon');
@@ -268,12 +293,15 @@ const CartCheckout = () => {
           onProfileClick={() => navigate('/profile')}
         />
         <div className="container mx-auto px-4 py-16 text-center">
-          <div className="w-24 h-24 mx-auto bg-secondary rounded-full flex items-center justify-center mb-6">
-            <ShoppingBag className="h-12 w-12 text-muted-foreground" />
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center mb-6">
+            <ShoppingBag className="h-12 w-12 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Your cart is empty</h1>
-          <p className="text-muted-foreground mb-6">Add some products to checkout</p>
-          <Button onClick={() => navigate('/shop')}>Browse Products</Button>
+          <p className="text-muted-foreground mb-6">Explore our collection and find something you'll love!</p>
+          <Button onClick={() => navigate('/shop')} size="lg" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Browse Products
+          </Button>
         </div>
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </div>
@@ -281,7 +309,7 @@ const CartCheckout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/20">
       <Header
         onCartClick={() => {}}
         onAuthClick={() => setIsAuthOpen(true)}
@@ -290,144 +318,218 @@ const CartCheckout = () => {
 
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Back Button */}
-        <Button variant="ghost" className="mb-4 gap-2" onClick={() => navigate(-1)}>
+        <Button variant="ghost" className="mb-4 gap-2 hover:bg-secondary/50" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Back to Shopping
         </Button>
 
-        <h1 className="text-2xl font-bold text-foreground mb-6">Checkout ({cartItems.length} items)</h1>
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-primary mb-2">
+            <Sparkles className="h-5 w-5" />
+            <span className="text-sm font-semibold uppercase tracking-wider">Secure Checkout</span>
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Complete Your Order
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart • Instant digital delivery
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Left - Cart Items */}
-          <div className="space-y-4">
-            {cartItems.map((item, index) => (
-              <div key={`${item.product.id}-${item.selectedOption}-${index}`} className="bg-card border border-border rounded-2xl p-4 flex gap-4">
-                <img
-                  src={item.product.image}
-                  alt={item.product.title}
-                  className="w-20 h-20 object-cover rounded-xl"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{item.product.title}</h3>
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs mt-1 ${item.selectedOption === 'right' ? 'border-purple-500 text-purple-600' : 'border-primary text-primary'}`}
-                  >
-                    {item.selectedOption === 'right' ? (
-                      <><Palette className="h-3 w-3 mr-1" />{item.label}</>
-                    ) : (
-                      <><CreditCard className="h-3 w-3 mr-1" />{item.label}</>
-                    )}
-                  </Badge>
-                  <p className="text-primary font-bold mt-2">₹{item.price}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeFromCart(index)}
-                  className="flex-shrink-0"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Left - Cart Items (3 cols) */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-border bg-secondary/30">
+                <h2 className="font-semibold text-foreground flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-primary" />
+                  Order Items
+                </h2>
               </div>
-            ))}
+              
+              <div className="divide-y divide-border">
+                {cartItems.map((item, index) => (
+                  <div key={`${item.product.id}-${item.selectedOption}-${index}`} className="p-4 flex gap-4 hover:bg-secondary/20 transition-colors">
+                    <img
+                      src={item.product.image}
+                      alt={item.product.title}
+                      className="w-20 h-20 object-cover rounded-xl shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground line-clamp-1">{item.product.title}</h3>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs mt-2 ${item.selectedOption === 'right' ? 'border-purple-500/50 text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'border-primary/50 text-primary bg-primary/5'}`}
+                      >
+                        {item.selectedOption === 'right' ? (
+                          <><Palette className="h-3 w-3 mr-1" />{item.label}</>
+                        ) : (
+                          <><CreditCard className="h-3 w-3 mr-1" />{item.label}</>
+                        )}
+                      </Badge>
+                      <p className="text-primary font-bold text-lg mt-2">₹{item.price}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFromCart(index)}
+                      className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {customizableItems.length > 0 && (
-              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-                <p className="text-sm text-purple-700 dark:text-purple-400">
-                  📝 {customizableItems.length} item(s) require customization form after payment
-                </p>
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-900/10 rounded-2xl border border-purple-200 dark:border-purple-800">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+                    <Palette className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-700 dark:text-purple-400">
+                      Customization Required
+                    </p>
+                    <p className="text-sm text-purple-600 dark:text-purple-500 mt-0.5">
+                      {customizableItems.length} {customizableItems.length === 1 ? 'item requires' : 'items require'} a customization form after payment
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Trust Badges */}
-            <div className="flex gap-4 justify-center pt-4">
-              <div className="flex flex-col items-center text-center">
-                <Shield className="h-6 w-6 text-primary mb-1" />
-                <span className="text-xs text-muted-foreground">Secure Payment</span>
+            <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="flex flex-col items-center text-center p-4 bg-card rounded-xl border border-border">
+                <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs font-medium text-foreground">Secure Payment</span>
+                <span className="text-[10px] text-muted-foreground">256-bit SSL</span>
               </div>
-              <div className="flex flex-col items-center text-center">
-                <Truck className="h-6 w-6 text-primary mb-1" />
-                <span className="text-xs text-muted-foreground">Instant Delivery</span>
+              <div className="flex flex-col items-center text-center p-4 bg-card rounded-xl border border-border">
+                <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                  <Truck className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs font-medium text-foreground">Instant Delivery</span>
+                <span className="text-[10px] text-muted-foreground">Digital access</span>
               </div>
-              <div className="flex flex-col items-center text-center">
-                <Gift className="h-6 w-6 text-primary mb-1" />
-                <span className="text-xs text-muted-foreground">Premium Quality</span>
+              <div className="flex flex-col items-center text-center p-4 bg-card rounded-xl border border-border">
+                <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs font-medium text-foreground">Premium Quality</span>
+                <span className="text-[10px] text-muted-foreground">100% authentic</span>
               </div>
             </div>
           </div>
 
-          {/* Right - Payment Section */}
-          <div className="space-y-4">
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-foreground mb-4">Order Summary</h2>
+          {/* Right - Payment Section (2 cols) */}
+          <div className="lg:col-span-2">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden sticky top-6">
+              <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-primary/10">
+                <h2 className="font-semibold text-foreground flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  Order Summary
+                </h2>
+              </div>
 
-              {/* Price Breakdown */}
-              <div className="space-y-3 pb-4 border-b border-border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{cartItems.length} item(s)</span>
-                  <span className="font-medium">₹{subtotal}</span>
-                </div>
-                {appliedCoupon && (
+              <div className="p-5 space-y-4">
+                {/* Price Breakdown */}
+                <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-green-600">Coupon ({appliedCoupon.code})</span>
-                    <span className="text-green-600">-₹{discountAmount}</span>
+                    <span className="text-muted-foreground">Subtotal ({cartItems.length} items)</span>
+                    <span className="font-medium text-foreground">₹{subtotal}</span>
                   </div>
-                )}
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between py-4 border-b border-border">
-                <span className="font-bold text-foreground">Total</span>
-                <span className="font-bold text-xl text-primary">₹{total}</span>
-              </div>
-
-              {/* Coupon Input */}
-              <div className="py-4 border-b border-border">
-                <label className="text-sm font-medium text-foreground mb-2 block">Coupon Code</label>
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-green-600" />
-                      <span className="font-mono font-medium text-green-700 dark:text-green-400">{appliedCoupon.code}</span>
-                      <Badge className="bg-green-100 text-green-700 text-xs">-{appliedCoupon.percentage}%</Badge>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-600 flex items-center gap-1">
+                        <Tag className="h-3 w-3" />
+                        Discount ({appliedCoupon.percentage}%)
+                      </span>
+                      <span className="text-green-600 font-medium">-₹{discountAmount}</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-600">
-                      Remove
-                    </Button>
+                  )}
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Total */}
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-foreground">Total</span>
+                  <div className="text-right">
+                    {appliedCoupon && (
+                      <span className="text-sm text-muted-foreground line-through mr-2">₹{subtotal}</span>
+                    )}
+                    <span className="font-bold text-2xl text-primary">₹{total}</span>
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
-                      {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-                    </Button>
-                  </div>
-                )}
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Coupon Input */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    Have a coupon code?
+                  </label>
+                  {appliedCoupon ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10 rounded-xl border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="font-mono font-bold text-green-700 dark:text-green-400">{appliedCoupon.code}</span>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 h-7 px-2">
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-green-700 dark:text-green-400">
+                        <PartyPopper className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          Congratulations! You're saving ₹{discountAmount} 🎉
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="flex-1 font-mono"
+                      />
+                      <Button onClick={handleApplyCoupon} disabled={isApplyingCoupon} variant="outline">
+                        {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Pay Button */}
+                <Button
+                  size="lg"
+                  className="w-full py-6 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
+                  onClick={handlePayment}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
+                  ) : (
+                    <><Lock className="h-4 w-4 mr-2" />Pay Securely ₹{total}</>
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  <span>Secure payment powered by Razorpay</span>
+                </div>
               </div>
-
-              {/* Pay Button */}
-              <Button
-                size="lg"
-                className="w-full mt-4 py-6 text-base font-semibold"
-                onClick={handlePayment}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <><Loader2 className="h-5 w-5 animate-spin mr-2" />Processing...</>
-                ) : (
-                  <><CreditCard className="h-5 w-5 mr-2" />Pay ₹{total}</>
-                )}
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Secure payment powered by Razorpay
-              </p>
             </div>
           </div>
         </div>
