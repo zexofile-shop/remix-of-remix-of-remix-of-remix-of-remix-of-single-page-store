@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, onValue, push, set } from 'firebase/database';
+import { ref, onValue, push, set, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -231,21 +231,21 @@ const CartCheckout = () => {
             
             // Update coupon usage if applied
             if (appliedCoupon) {
+              const couponUsageUpdates: Record<string, any> = {};
+              couponUsageUpdates[`coupons/${appliedCoupon.couponId}/usedBy/${user.uid}`] = {
+                email: user.email || '',
+                usedAt: Date.now(),
+              };
+              // Increment usedCount
               const couponRef = ref(database, `coupons/${appliedCoupon.couponId}`);
               const couponSnapshot = await new Promise<any>((resolve) => {
                 onValue(couponRef, resolve, { onlyOnce: true });
               });
               if (couponSnapshot.exists()) {
                 const couponData = couponSnapshot.val();
-                await set(couponRef, {
-                  ...couponData,
-                  usedCount: (couponData.usedCount || 0) + 1,
-                  [`usedBy/${user.uid}`]: {
-                    email: user.email,
-                    usedAt: Date.now(),
-                  },
-                });
+                couponUsageUpdates[`coupons/${appliedCoupon.couponId}/usedCount`] = (couponData.usedCount || 0) + 1;
               }
+              await update(ref(database), couponUsageUpdates);
             }
             
             // Clear cart

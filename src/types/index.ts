@@ -7,7 +7,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
-  type: 'course' | 'website';
+  type: string;
   category?: string;
   previewLink?: string;
   razorpayLink?: string;
@@ -18,6 +18,8 @@ export interface Product {
   isFreeResource?: boolean;
   allowCustomization?: boolean;
   isOutOfStock?: boolean;
+  /** Custom label for the single buy button (when dual buttons not enabled) */
+  buyButtonLabel?: string;
   /** Which price should be shown as the main price on cards/details when dual buttons exist */
   displayPriceFrom?: 'base' | 'left' | 'right';
   /** Image aspect ratio for product images */
@@ -53,7 +55,7 @@ export interface Purchase {
   productId: string;
   productTitle?: string;
   productImage?: string;
-  productType: 'course' | 'website';
+  productType: string;
   purchaseDate: number;
   amount: number;
   razorpayPaymentId?: string;

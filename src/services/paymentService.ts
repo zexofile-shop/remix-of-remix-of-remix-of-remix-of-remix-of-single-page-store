@@ -10,7 +10,7 @@ export interface PurchaseRecord {
   productId: string;
   productTitle: string;
   productImage: string;
-  productType: 'course' | 'website';
+  productType: string;
   deliveryLink: string;
   amount: number;
   originalAmount?: number;
