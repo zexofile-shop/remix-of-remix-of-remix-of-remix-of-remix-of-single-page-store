@@ -274,7 +274,8 @@ const Admin = () => {
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
-  const [productType, setProductType] = useState<'course' | 'website'>('course');
+  const [productType, setProductType] = useState<string>('course');
+  const [buyButtonLabel, setBuyButtonLabel] = useState('');
 
   // Product form state
   const [title, setTitle] = useState('');
@@ -503,6 +504,7 @@ const Admin = () => {
     setAllowCustomization(false);
     setIsOutOfStock(false);
     setImageAspectRatio('4:3');
+    setBuyButtonLabel('');
     setEditingProduct(null);
     // Reset dual button config
     setEnableDualButtons(false);
@@ -542,6 +544,7 @@ const Admin = () => {
       isOutOfStock,
       imageAspectRatio,
       displayPriceFrom: enableDualButtons ? displayPriceFrom : 'base',
+      buyButtonLabel: buyButtonLabel || null,
       createdAt: Date.now(),
     };
 
@@ -562,7 +565,8 @@ const Admin = () => {
       };
     }
 
-    const dbPath = productType === 'course' ? 'courses' : 'websites';
+    // Store in courses or websites node based on type (custom types go to courses)
+    const dbPath = productType === 'website' ? 'websites' : 'courses';
 
     try {
       if (editingProduct) {
@@ -581,7 +585,7 @@ const Admin = () => {
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-    const dbPath = product.type === 'course' ? 'courses' : 'websites';
+    const dbPath = product.type === 'website' ? 'websites' : 'courses';
     try {
       await remove(ref(database, `${dbPath}/${product.id}`));
       toast.success('Product deleted!');
@@ -607,6 +611,7 @@ const Admin = () => {
     setAllowCustomization(product.allowCustomization || false);
     setIsOutOfStock(product.isOutOfStock || false);
     setImageAspectRatio(product.imageAspectRatio || '4:3');
+    setBuyButtonLabel(product.buyButtonLabel || '');
     // Load dual button config
     if (product.leftButton || product.rightButton) {
       setEnableDualButtons(true);
@@ -1212,14 +1217,22 @@ const Admin = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Type *</Label>
-                    <Select value={productType} onValueChange={(v) => setProductType(v as 'course' | 'website')}>
-                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="course">Course</SelectItem>
-                        <SelectItem value="website">Website</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs">Type / Category *</Label>
+                    <Input 
+                      value={productType} 
+                      onChange={(e) => setProductType(e.target.value)} 
+                      placeholder="e.g. course, website, template, app..."
+                      list="product-types"
+                      className="h-9 text-sm" 
+                    />
+                    <datalist id="product-types">
+                      <option value="course" />
+                      <option value="website" />
+                      <option value="template" />
+                      <option value="app" />
+                      <option value="design" />
+                      <option value="plugin" />
+                    </datalist>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Title *</Label>
@@ -1301,6 +1314,20 @@ const Admin = () => {
                       <Label className="text-xs text-blue-700 dark:text-blue-400">Dual Pay Buttons</Label>
                     </div>
                   </div>
+
+                  {/* Single Buy Button Label (only when dual buttons disabled) */}
+                  {!enableDualButtons && (
+                    <div className="col-span-full space-y-1">
+                      <Label className="text-xs">Buy Button Label</Label>
+                      <Input 
+                        value={buyButtonLabel} 
+                        onChange={(e) => setBuyButtonLabel(e.target.value)} 
+                        placeholder="Buy Now (leave empty for default)" 
+                        className="h-9 text-sm" 
+                      />
+                      <p className="text-[10px] text-muted-foreground">Custom text for the buy button. Default: "Buy Now"</p>
+                    </div>
+                  )}
 
                   {/* Dual Button Configuration */}
                   {enableDualButtons && (

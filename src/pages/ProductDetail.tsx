@@ -234,13 +234,13 @@ const ProductDetail = () => {
       return {
         price: product.leftButton.price,
         originalPrice: product.leftButton.originalPrice,
-        label: product.leftButton.label || 'Source Code',
+        label: product.leftButton.label || product?.buyButtonLabel || 'Buy Now',
       };
     }
     return {
       price: product?.price || 0,
       originalPrice: product?.originalPrice,
-      label: 'Source Code',
+      label: product?.buyButtonLabel || 'Buy Now',
     };
   };
 
