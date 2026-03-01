@@ -21,10 +21,12 @@ import { toast } from 'sonner';
 import { 
   Trash2, Edit, Plus, X, LogOut, Package, Users, FileText, Settings, Image, Star, 
   MessageSquare, DollarSign, Youtube, Images, Upload, Loader2, Link, ArrowLeft, Shield,
-  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User, ClipboardList, UserCog, Crown
+  Mail, Ticket, Eye, EyeOff, Percent, Phone, Send, ShoppingBag, User, ClipboardList, UserCog, Crown,
+  Palette, Snowflake, Sun, Cloud, Droplets, TreeDeciduous, Sparkles
 } from 'lucide-react';
 import { uploadToImgBB } from '@/lib/imgbb';
 import zexofileLogo from '@/assets/zexofile-logo.png';
+import ThemeManager from '@/components/ThemeManager';
 
 interface SliderImage {
   id: string;
@@ -1051,6 +1053,10 @@ const Admin = () => {
               <Settings className="h-3 w-3" />
               <span className="hidden xs:inline">Settings</span>
             </TabsTrigger>
+            <TabsTrigger value="themes" className="flex items-center gap-1 text-xs px-2 py-1.5">
+              <Palette className="h-3 w-3" />
+              <span className="hidden xs:inline">Themes</span>
+            </TabsTrigger>
             {isSuperAdmin && (
               <TabsTrigger value="admins" className="flex items-center gap-1 text-xs px-2 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
                 <Crown className="h-3 w-3 text-amber-500" />
@@ -2039,6 +2045,11 @@ const Admin = () => {
               </div>
             </TabsContent>
           )}
+
+          {/* Themes Tab */}
+          <TabsContent value="themes" className="space-y-4">
+            <ThemeManager />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

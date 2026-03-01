@@ -81,8 +81,8 @@ const ProductCard = ({ product, onBuy, uniformSize = false }: ProductCardProps) 
         </button>
       </div>
       
-      <div className="p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-foreground text-sm mb-1 line-clamp-2">
+      <div className="p-4 flex flex-col" style={{ height: '120px' }}>
+        <h3 className="font-semibold text-foreground text-sm mb-1 line-clamp-1">
           {product.title}
         </h3>
         <p className="text-xs text-muted-foreground mb-3 line-clamp-1">
