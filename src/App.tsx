@@ -18,6 +18,8 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import CartPage from "./pages/CartPage";
+import AccountPage from "./pages/AccountPage";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +107,8 @@ const App = () => (
                     <Route path="/login" element={<Login />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/account" element={<AccountPage />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>

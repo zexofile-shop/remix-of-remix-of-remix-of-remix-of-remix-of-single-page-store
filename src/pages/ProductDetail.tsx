@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { ref, onValue } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,10 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ShoppingCart, CreditCard, Heart, Star, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, Play, Loader2, Package, Palette } from 'lucide-react';
 import Header from '@/components/Header';
-import CartModal from '@/components/CartModal';
 import CartOptionDialog from '@/components/CartOptionDialog';
 import AuthModal from '@/components/AuthModal';
-import ProfilePanel from '@/components/ProfilePanel';
 import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
@@ -29,9 +28,7 @@ const ProductDetail = () => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentScreenshotIndex, setCurrentScreenshotIndex] = useState(0);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -149,10 +146,18 @@ const ProductDetail = () => {
     toast.success(`${product.title} (${label}) added to cart!`);
   };
 
+  const profileCompletion = useProfileCompletion();
+
   const handlePayment = (type: 'left' | 'right') => {
     if (!user) {
       toast.error('Please login to make a purchase');
       setIsAuthOpen(true);
+      return;
+    }
+
+    if (!profileCompletion.isComplete) {
+      toast.error(`Please complete your profile first (${profileCompletion.percent}% done). Missing: ${profileCompletion.missing.join(', ')}`);
+      navigate('/account');
       return;
     }
 
@@ -279,9 +284,7 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-background">
       <Header
         cartCount={cartItems.length}
-        onCartClick={() => setIsCartOpen(true)}
         onAuthClick={() => setIsAuthOpen(true)}
-        onProfileClick={() => setIsProfileOpen(true)}
       />
 
       <div className="container mx-auto px-4 py-6 md:py-8">
@@ -579,12 +582,6 @@ const ProductDetail = () => {
       </footer>
 
       {/* Modals */}
-      <CartModal
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cartItems}
-        onRemove={removeFromCart}
-      />
       <CartOptionDialog
         isOpen={showCartOptionDialog}
         onClose={() => setShowCartOptionDialog(false)}
@@ -592,7 +589,6 @@ const ProductDetail = () => {
         onSelectOption={handleCartOptionSelect}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      <ProfilePanel isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       <PaymentSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
