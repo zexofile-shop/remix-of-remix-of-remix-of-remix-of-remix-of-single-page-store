@@ -4,6 +4,7 @@ import { ref, onValue, push, set, update } from 'firebase/database';
 import { database } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { CartItem, OrderSubmission } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ const CartCheckout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { cartItems, removeFromCart, clearCart } = useCart();
+  const profileCompletion = useProfileCompletion();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; couponId: string; percentage: number } | null>(null);
@@ -125,6 +127,12 @@ const CartCheckout = () => {
   const handlePayment = async () => {
     if (!user) {
       setIsAuthOpen(true);
+      return;
+    }
+
+    if (!profileCompletion.isComplete) {
+      toast.error(`Please complete your profile first (${profileCompletion.percent}% done). Missing: ${profileCompletion.missing.join(', ')}`);
+      navigate('/account');
       return;
     }
 

@@ -7,8 +7,6 @@ import CustomProjectForm from '@/components/CustomProjectForm';
 import CustomProjectPopup from '@/components/CustomProjectPopup';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
-import ProfilePanel from '@/components/ProfilePanel';
-import CartModal from '@/components/CartModal';
 import { Product } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
@@ -18,8 +16,6 @@ import { Search, Filter, SlidersHorizontal, X, Gift, Globe, Palette, Clock, Shie
 
 const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showProfilePanel, setShowProfilePanel] = useState(false);
-  const [showCartModal, setShowCartModal] = useState(false);
   const [showCustomProjectPopup, setShowCustomProjectPopup] = useState(false);
   const { cartItems, removeFromCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
@@ -191,8 +187,6 @@ const Index = () => {
       <Header
         cartCount={cartItems.length}
         onAuthClick={() => setShowAuthModal(true)}
-        onCartClick={() => setShowCartModal(true)}
-        onProfileClick={() => setShowProfilePanel(true)}
       />
 
         <main>
@@ -382,8 +376,6 @@ const Index = () => {
         <Footer />
 
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-        <ProfilePanel isOpen={showProfilePanel} onClose={() => setShowProfilePanel(false)} />
-        <CartModal isOpen={showCartModal} onClose={() => setShowCartModal(false)} cartItems={cartItems} onRemove={removeFromCart} onAuthRequired={() => setShowAuthModal(true)} onProfileOpen={() => setShowProfilePanel(true)} />
         <CustomProjectPopup 
           isOpen={showCustomProjectPopup} 
           onClose={() => setShowCustomProjectPopup(false)} 

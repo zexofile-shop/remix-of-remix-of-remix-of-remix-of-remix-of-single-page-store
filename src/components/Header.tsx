@@ -1,16 +1,42 @@
 import { Menu, X, ShoppingCart, User, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { ref, onValue } from 'firebase/database';
+import { database } from '@/lib/firebase';
 import zexofileLogo from '@/assets/zexofile-logo.png';
+
+const UserProfileAvatar = ({ user, size = 'sm' }: { user: any; size?: 'sm' | 'md' }) => {
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onValue(ref(database, `users/${user.uid}/profilePic`), (snap) => {
+      setProfilePic(snap.val() || null);
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  const s = size === 'sm' ? 'w-7 h-7' : 'w-9 h-9';
+  const initials = user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U';
+
+  if (profilePic) {
+    return <img src={profilePic} alt="Profile" className={`${s} rounded-full object-cover`} />;
+  }
+  return (
+    <div className={`${s} rounded-full bg-primary flex items-center justify-center`}>
+      <span className="text-xs font-bold text-primary-foreground">{initials}</span>
+    </div>
+  );
+};
 
 interface HeaderProps {
   cartCount?: number;
   onAuthClick: () => void;
-  onCartClick: () => void;
-  onProfileClick: () => void;
+  onCartClick?: () => void;
+  onProfileClick?: () => void;
 }
 
 const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: HeaderProps) => {
@@ -72,7 +98,7 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={onCartClick}
+              onClick={() => navigate('/cart')}
             >
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
@@ -86,9 +112,10 @@ const Header = ({ cartCount = 0, onAuthClick, onCartClick, onProfileClick }: Hea
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onProfileClick}
+                onClick={() => navigate('/account')}
+                className="relative"
               >
-                <User className="h-5 w-5" />
+                <UserProfileAvatar user={user} size="sm" />
               </Button>
             ) : (
               <Button

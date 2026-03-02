@@ -20,8 +20,8 @@ const ProductCard = ({ product, onBuy, uniformSize = false }: ProductCardProps) 
 
   const isOutOfStock = !!product.isOutOfStock;
   const mainPricing = getMainDisplayPricing(product);
-  // Use uniform square aspect ratio for grid displays, otherwise use product's configured ratio
-  const aspectClass = uniformSize ? 'aspect-square' : getAspectRatioClass(product.imageAspectRatio);
+  // Use product's configured aspect ratio, fallback to auto-fit
+  const aspectClass = getAspectRatioClass(product.imageAspectRatio);
   
   const hasDiscount = !!(mainPricing.originalPrice && mainPricing.originalPrice > mainPricing.price);
   const discountPercentage = hasDiscount 
@@ -53,7 +53,7 @@ const ProductCard = ({ product, onBuy, uniformSize = false }: ProductCardProps) 
         <img
           src={product.image}
           alt={product.title}
-          className="w-full h-full object-cover bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-contain bg-secondary/20 group-hover:scale-105 transition-transform duration-300"
         />
         {isOutOfStock && (
           <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground font-bold">
