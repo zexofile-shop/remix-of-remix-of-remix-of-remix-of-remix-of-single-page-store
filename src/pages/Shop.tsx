@@ -85,67 +85,7 @@ const Index = () => {
     };
   }, []);
 
-  // Demo products
-  const demoProducts: Product[] = [
-    {
-      id: '1',
-      title: 'Special Apology Customisable Link',
-      description: 'Perfect for saying sorry with a beautiful personalized website',
-      price: 299.00,
-      originalPrice: 399.00,
-      image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '2',
-      title: 'Cute Birthday Wish Customisable Link',
-      description: 'Birthday wishes made special with custom animations',
-      price: 299.00,
-      image: 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now() - 1000,
-    },
-    {
-      id: '3',
-      title: 'Birthday Wish Gift Customisable Link',
-      description: 'Make their day memorable with a unique gift',
-      price: 449.00,
-      image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now() - 2000,
-    },
-    {
-      id: '4',
-      title: 'Cute Website Customisable Link',
-      description: 'Express your feelings with a cute themed website',
-      price: 199.00,
-      image: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now() - 3000,
-    },
-    {
-      id: '5',
-      title: 'Web Development Course',
-      description: 'Learn HTML, CSS, JavaScript from scratch',
-      price: 999.00,
-      originalPrice: 1499.00,
-      image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=300&fit=crop',
-      type: 'course',
-      createdAt: Date.now() - 4000,
-    },
-    {
-      id: '6',
-      title: 'Anniversary Special Link',
-      description: 'Celebrate your special day with a beautiful website',
-      price: 349.00,
-      image: 'https://images.unsplash.com/photo-1529636798458-92182e662485?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now() - 5000,
-    },
-  ];
-
-  const displayProducts = products.length > 0 ? products : demoProducts;
+  const displayProducts = products;
 
   // Filter and sort products
   const filteredProducts = displayProducts
