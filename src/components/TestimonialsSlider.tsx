@@ -26,51 +26,7 @@ const TestimonialsSlider = () => {
     return () => unsubscribe();
   }, []);
 
-  // Demo testimonials if database is empty
-  const demoTestimonials: Testimonial[] = [
-    {
-      id: '1',
-      name: 'Aditi',
-      message: 'Absolutely love this product! The quality exceeded my expectations and the customer service was outstanding.',
-      rating: 5,
-      createdAt: Date.now(),
-      approved: true,
-    },
-    {
-      id: '2',
-      name: 'Shalini',
-      message: 'It was honestly so creative and heart-touching. Felt really special. Thank you so much!',
-      rating: 5,
-      createdAt: Date.now(),
-      approved: true,
-    },
-    {
-      id: '3',
-      name: 'Vanya',
-      message: 'Highly recommend! Great value for money and the team was so helpful with my questions.',
-      rating: 5,
-      createdAt: Date.now(),
-      approved: true,
-    },
-    {
-      id: '4',
-      name: 'Riya',
-      message: 'The best digital product I have ever purchased. Worth every rupee spent!',
-      rating: 5,
-      createdAt: Date.now(),
-      approved: true,
-    },
-    {
-      id: '5',
-      name: 'Priya',
-      message: 'Amazing experience! Quick delivery and excellent quality. Will buy again.',
-      rating: 5,
-      createdAt: Date.now(),
-      approved: true,
-    },
-  ];
-
-  const displayTestimonials = testimonials.length > 0 ? testimonials : demoTestimonials;
+  const displayTestimonials = testimonials;
 
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (scrollRef.current) {

@@ -56,48 +56,7 @@ const ProductsSection = ({ onBuy }: ProductsSectionProps) => {
     };
   }, []);
 
-  // Demo products if database is empty
-  const demoProducts: Product[] = [
-    {
-      id: '1',
-      title: 'Special Apology Customisable Link',
-      description: 'Perfect for saying sorry',
-      price: 299.00,
-      originalPrice: 399.00,
-      image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '2',
-      title: 'Cute Birthday Wish Customisable Link',
-      description: 'Birthday wishes made special',
-      price: 299.00,
-      image: 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '3',
-      title: 'Birthday Wish Gift Customisable Link',
-      description: 'Make their day memorable',
-      price: 449.00,
-      image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-    {
-      id: '4',
-      title: 'Cute Website Customisable Link',
-      description: 'Express your feelings',
-      price: 199.00,
-      image: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=300&fit=crop',
-      type: 'website',
-      createdAt: Date.now(),
-    },
-  ];
-
-  const displayProducts = products.length > 0 ? products : demoProducts;
+  const displayProducts = products;
 
   return (
     <section id="courses" className="py-16 bg-background">
