@@ -97,7 +97,7 @@ const CustomizationFormPage = () => {
     };
 
     try {
-      await supabase.from('order_submissions').update({ form_data: formData, status: 'pending' }).eq('id', orderId);
+      await supabase.from('order_submissions').update({ form_data: formData as any, status: 'pending' }).eq('id', orderId);
 
       const pendingForms = sessionStorage.getItem('pendingForms');
       const currentIndex = parseInt(sessionStorage.getItem('currentFormIndex') || '0', 10);
