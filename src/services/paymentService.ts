@@ -1,26 +1,24 @@
-import { ref, push, set, get, query, orderByChild, equalTo, update } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { loadRazorpayScript, RAZORPAY_KEY_ID, RazorpayPaymentResponse } from '@/lib/razorpay';
 import { Product } from '@/types';
 
 export interface PurchaseRecord {
   id?: string;
-  userId: string;
-  userEmail: string;
-  productId: string;
-  productTitle: string;
-  productImage: string;
-  productType: string;
-  deliveryLink: string;
+  user_id: string;
+  user_email: string;
+  product_id: string;
+  product_title: string;
+  product_image: string;
+  product_type: string;
+  delivery_link: string;
   amount: number;
-  originalAmount?: number;
-  couponCode?: string;
-  couponDiscount?: number;
-  razorpayPaymentId: string;
-  purchaseDate: number;
+  original_amount?: number;
+  coupon_code?: string;
+  coupon_discount?: number;
+  razorpay_payment_id: string;
+  purchase_date: number;
 }
 
-// Initialize Razorpay and open payment modal
 export const initiatePayment = async (
   product: Product,
   user: { uid: string; email: string | null; displayName: string | null },
@@ -28,19 +26,15 @@ export const initiatePayment = async (
   onFailure: (error: string) => void,
   couponData?: { couponId: string; couponCode: string; discount: number }
 ): Promise<void> => {
-  // Load Razorpay script
   const isLoaded = await loadRazorpayScript();
   if (!isLoaded) {
     onFailure('Failed to load payment gateway. Please try again.');
     return;
   }
 
-  // Calculate final amount after coupon discount
   const originalAmount = product.price;
   const discount = couponData?.discount || 0;
   const finalAmount = originalAmount - discount;
-
-  // Amount in paise (multiply by 100)
   const amountInPaise = Math.round(finalAmount * 100);
 
   const options = {
@@ -59,162 +53,129 @@ export const initiatePayment = async (
       userId: user.uid,
       couponCode: couponData?.couponCode || '',
     },
-    theme: {
-      color: '#6366f1',
-    },
+    theme: { color: '#6366f1' },
     handler: async (response: RazorpayPaymentResponse) => {
-      console.log('Razorpay payment success, payment ID:', response.razorpay_payment_id);
       try {
-        // Save purchase to Firebase
-        console.log('Saving purchase to database...');
-        const purchase = await savePurchase(
-          product, 
-          user, 
-          response.razorpay_payment_id,
-          couponData
-        );
-        console.log('Purchase saved successfully:', purchase.id);
-        
-        // Update coupon usage if a coupon was used
+        const purchase = await savePurchase(product, user, response.razorpay_payment_id, couponData);
         if (couponData) {
-          console.log('Updating coupon usage...');
           await updateCouponUsage(couponData.couponId, user.uid, user.email || '');
         }
-        
         onSuccess(purchase);
       } catch (error) {
         console.error('Failed to save purchase:', error);
         onFailure('Payment successful but failed to save purchase. Please contact support.');
       }
     },
-    modal: {
-      ondismiss: () => {
-        // User closed the payment modal
-      },
-    },
+    modal: { ondismiss: () => {} },
   };
 
   const razorpay = new window.Razorpay(options);
   razorpay.open();
 };
 
-// Update coupon usage
 const updateCouponUsage = async (couponId: string, userId: string, userEmail: string): Promise<void> => {
-  const couponRef = ref(database, `coupons/${couponId}`);
-  const snapshot = await get(couponRef);
-  
-  if (snapshot.exists()) {
-    const coupon = snapshot.val();
-    await update(couponRef, {
-      usedCount: (coupon.usedCount || 0) + 1,
-      [`usedBy/${userId}`]: {
-        email: userEmail,
-        usedAt: Date.now(),
-      },
-    });
+  const { data: coupon } = await supabase
+    .from('coupons')
+    .select('used_count, used_by')
+    .eq('id', couponId)
+    .single();
+
+  if (coupon) {
+    const usedBy = (coupon.used_by as Record<string, any>) || {};
+    usedBy[userId] = { email: userEmail, usedAt: Date.now() };
+
+    await supabase
+      .from('coupons')
+      .update({
+        used_count: (coupon.used_count || 0) + 1,
+        used_by: usedBy,
+      })
+      .eq('id', couponId);
   }
 };
 
-// Save purchase to Firebase
 const savePurchase = async (
   product: Product,
   user: { uid: string; email: string | null },
   razorpayPaymentId: string,
   couponData?: { couponId: string; couponCode: string; discount: number }
 ): Promise<PurchaseRecord> => {
-  console.log('savePurchase called with:', { 
-    productId: product.id, 
-    userId: user.uid, 
-    razorpayPaymentId,
-    hasCoupon: !!couponData 
-  });
-  
-  const purchasesRef = ref(database, 'purchases');
-  const newPurchaseRef = push(purchasesRef);
-  
   const finalAmount = product.price - (couponData?.discount || 0);
-  
-  // Build purchase record - ensure no undefined values
-  const purchase: PurchaseRecord = {
-    userId: user.uid,
-    userEmail: user.email || '',
-    productId: product.id,
-    productTitle: product.title,
-    productImage: product.image,
-    productType: product.type,
-    deliveryLink: product.deliveryLink || product.razorpayLink || '',
+
+  const purchase: any = {
+    user_id: user.uid,
+    user_email: user.email || '',
+    product_id: product.id,
+    product_title: product.title,
+    product_image: product.image,
+    product_type: product.type,
+    delivery_link: product.deliveryLink || product.razorpayLink || '',
     amount: finalAmount,
-    razorpayPaymentId,
-    purchaseDate: Date.now(),
+    razorpay_payment_id: razorpayPaymentId,
+    purchase_date: Date.now(),
   };
 
-  // Only add coupon fields if coupon was used
   if (couponData) {
-    purchase.originalAmount = product.price;
-    purchase.couponCode = couponData.couponCode;
-    purchase.couponDiscount = couponData.discount;
+    purchase.original_amount = product.price;
+    purchase.coupon_code = couponData.couponCode;
+    purchase.coupon_discount = couponData.discount;
   }
 
-  console.log('Saving purchase record:', purchase);
-  
-  await set(newPurchaseRef, purchase);
-  
-  console.log('Purchase saved with ID:', newPurchaseRef.key);
-  
-  return { ...purchase, id: newPurchaseRef.key! };
+  const { data, error } = await supabase
+    .from('purchases')
+    .insert(purchase)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { ...purchase, id: data.id };
 };
 
-// Get user's purchase history
 export const getUserPurchases = async (userId: string): Promise<PurchaseRecord[]> => {
-  const purchasesRef = ref(database, 'purchases');
-  const userPurchasesQuery = query(purchasesRef, orderByChild('userId'), equalTo(userId));
-  
-  const snapshot = await get(userPurchasesQuery);
-  
-  if (!snapshot.exists()) {
-    return [];
-  }
-  
-  const purchases: PurchaseRecord[] = [];
-  snapshot.forEach((child) => {
-    purchases.push({
-      id: child.key!,
-      ...child.val(),
-    });
-  });
-  
-  // Sort by purchase date (newest first)
-  return purchases.sort((a, b) => b.purchaseDate - a.purchaseDate);
+  const { data, error } = await supabase
+    .from('purchases')
+    .select('*')
+    .eq('user_id', userId)
+    .order('purchase_date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as PurchaseRecord[];
 };
 
-// Check if user has already purchased a product
 export const hasUserPurchasedProduct = async (userId: string, productId: string): Promise<boolean> => {
-  const purchases = await getUserPurchases(userId);
-  return purchases.some(p => p.productId === productId);
+  const { data } = await supabase
+    .from('purchases')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('product_id', productId)
+    .limit(1);
+
+  return (data || []).length > 0;
 };
 
-// Save free resource access (no payment required)
 export const saveFreeResourceAccess = async (
   product: Product,
   user: { uid: string; email: string | null }
 ): Promise<PurchaseRecord> => {
-  const purchasesRef = ref(database, 'purchases');
-  const newPurchaseRef = push(purchasesRef);
-  
-  const purchase: PurchaseRecord = {
-    userId: user.uid,
-    userEmail: user.email || '',
-    productId: product.id,
-    productTitle: product.title,
-    productImage: product.image,
-    productType: product.type,
-    deliveryLink: product.deliveryLink || product.razorpayLink || '',
+  const purchase = {
+    user_id: user.uid,
+    user_email: user.email || '',
+    product_id: product.id,
+    product_title: product.title,
+    product_image: product.image,
+    product_type: product.type,
+    delivery_link: product.deliveryLink || product.razorpayLink || '',
     amount: 0,
-    razorpayPaymentId: 'FREE_RESOURCE',
-    purchaseDate: Date.now(),
+    razorpay_payment_id: 'FREE_RESOURCE',
+    purchase_date: Date.now(),
   };
 
-  await set(newPurchaseRef, purchase);
-  
-  return { ...purchase, id: newPurchaseRef.key! };
+  const { data, error } = await supabase
+    .from('purchases')
+    .insert(purchase)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { ...purchase, id: data.id };
 };

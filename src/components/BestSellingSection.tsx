@@ -1,18 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface BestSellingProduct {
-  id: string;
-  productId: string;
-  order: number;
-}
 
 interface BestSellingSectionProps {
   onBuy: (product: Product) => void;
@@ -21,82 +14,43 @@ interface BestSellingSectionProps {
 const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [bestSellingIds, setBestSellingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch best selling product IDs
-    const bestSellingRef = ref(database, 'bestSelling');
-    const unsubscribeBestSelling = onValue(bestSellingRef, (snapshot) => {
-      const data = snapshot.val();
-      const list: BestSellingProduct[] = data
-        ? Object.entries(data)
-            .map(([id, value]: [string, any]) => ({ ...value, id }))
-            .sort((a, b) => a.order - b.order)
-        : [];
-      setBestSellingIds(list.map(item => item.productId));
-    });
+    const fetchData = async () => {
+      // Fetch best selling IDs
+      const { data: bestSelling } = await supabase
+        .from('best_selling')
+        .select('product_id, sort_order')
+        .order('sort_order', { ascending: true });
 
-    // Fetch all products
-    const coursesRef = ref(database, 'courses');
-    const websitesRef = ref(database, 'websites');
+      // Fetch all products
+      const { data: allProducts } = await supabase
+        .from('products')
+        .select('*');
 
-    const unsubscribeCourses = onValue(coursesRef, (snapshot) => {
-      const data = snapshot.val();
-      const coursesList: Product[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({
-            ...value,
-            id,
-            type: 'course' as const,
-          }))
-        : [];
-      setProducts((prev) => {
-        const websites = prev.filter(p => p.type === 'website');
-        return [...coursesList, ...websites];
-      });
+      const mapped = (allProducts || []).map((p: any) => mapProduct(p));
+
+      if (bestSelling && bestSelling.length > 0) {
+        const bestIds = bestSelling.map(b => b.product_id);
+        const filtered = bestIds
+          .map(id => mapped.find(p => p.id === id))
+          .filter(Boolean) as Product[];
+        setProducts(filtered.slice(0, 4));
+      } else {
+        setProducts(mapped.slice(0, 4));
+      }
       setLoading(false);
-    });
-
-    const unsubscribeWebsites = onValue(websitesRef, (snapshot) => {
-      const data = snapshot.val();
-      const websitesList: Product[] = data
-        ? Object.entries(data).map(([id, value]: [string, any]) => ({
-            ...value,
-            id,
-            type: 'website' as const,
-          }))
-        : [];
-      setProducts((prev) => {
-        const courses = prev.filter(p => p.type === 'course');
-        return [...courses, ...websitesList];
-      });
-    });
-
-    return () => {
-      unsubscribeBestSelling();
-      unsubscribeCourses();
-      unsubscribeWebsites();
     };
+    fetchData();
   }, []);
-
-  // Filter products based on best selling IDs or show first 4 if none selected
-  const displayProducts = bestSellingIds.length > 0
-    ? products.filter(p => bestSellingIds.includes(p.id)).slice(0, 4)
-    : products.slice(0, 4);
-
-  // Don't show demo products - only show real data from database
-  const productsToShow = displayProducts;
 
   return (
     <section className="py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Best Selling Products
-          </h2>
-          <p className="text-muted-foreground">
-            Our most loved creations by customers
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Best Selling Products</h2>
+          <p className="text-muted-foreground">Our most loved creations by customers</p>
         </div>
 
         {loading ? (
@@ -112,12 +66,8 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 md:gap-6">
-            {productsToShow.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-slide-up h-full"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
+            {products.map((product, index) => (
+              <div key={product.id} className="animate-slide-up h-full" style={{ animationDelay: `${index * 0.1}s` }}>
                 <ProductCard product={product} onBuy={onBuy} uniformSize />
               </div>
             ))}
@@ -125,12 +75,7 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
         )}
 
         <div className="text-center mt-10">
-          <Button
-            size="lg"
-            variant="outline"
-            className="rounded-full px-8 group"
-            onClick={() => navigate('/shop')}
-          >
+          <Button size="lg" variant="outline" className="rounded-full px-8 group" onClick={() => navigate('/shop')}>
             View All Products
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
@@ -139,5 +84,34 @@ const BestSellingSection = ({ onBuy }: BestSellingSectionProps) => {
     </section>
   );
 };
+
+// Helper to map DB row to Product type
+export function mapProduct(p: any): Product {
+  return {
+    id: p.id,
+    title: p.title,
+    description: p.description || '',
+    price: Number(p.price) || 0,
+    originalPrice: p.original_price ? Number(p.original_price) : undefined,
+    image: p.image || '',
+    type: p.type || 'course',
+    category: p.category || undefined,
+    previewLink: p.preview_link || undefined,
+    razorpayLink: p.razorpay_link || undefined,
+    deliveryLink: p.delivery_link || undefined,
+    content: p.content || undefined,
+    screenshots: p.screenshots || [],
+    youtubeUrl: p.youtube_url || undefined,
+    isFreeResource: p.is_free_resource || false,
+    allowCustomization: p.allow_customization || false,
+    isOutOfStock: p.is_out_of_stock || false,
+    buyButtonLabel: p.buy_button_label || undefined,
+    displayPriceFrom: p.display_price_from || undefined,
+    imageAspectRatio: p.image_aspect_ratio || undefined,
+    leftButton: p.left_button || undefined,
+    rightButton: p.right_button || undefined,
+    createdAt: p.created_at || Date.now(),
+  };
+}
 
 export default BestSellingSection;
