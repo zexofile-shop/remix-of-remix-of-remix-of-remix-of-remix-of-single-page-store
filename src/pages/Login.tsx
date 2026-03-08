@@ -48,11 +48,8 @@ const Login = () => {
     setLoading(true);
     try {
       await signInWithGoogle();
-      toast.success('Welcome!');
-      navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Google sign-in failed');
-    } finally {
       setLoading(false);
     }
   };
