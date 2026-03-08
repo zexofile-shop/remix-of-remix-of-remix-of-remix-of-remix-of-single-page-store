@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface ProfileCompletion {
@@ -20,24 +19,48 @@ export const useProfileCompletion = (): ProfileCompletion => {
   });
 
   useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = onValue(ref(database, `users/${user.uid}`), (snap) => {
-      const val = snap.val() || {};
-      const fields = [
-        { done: !!val.displayName?.trim(), label: 'Name' },
-        { done: !!val.phone?.trim(), label: 'Phone' },
-        { done: !!val.profilePic, label: 'Profile Photo' },
-      ];
-      const done = fields.filter(f => f.done).length;
-      setData({
-        isComplete: done === fields.length,
-        percent: Math.round((done / fields.length) * 100),
-        missing: fields.filter(f => !f.done).map(f => f.label),
-        profilePic: val.profilePic || null,
-      });
-    });
-    return () => unsub();
-  }, [user?.uid]);
+    if (!user?.id) return;
+
+    const fetchProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, phone, profile_pic')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        const fields = [
+          { done: !!profile.display_name?.trim(), label: 'Name' },
+          { done: !!profile.phone?.trim(), label: 'Phone' },
+          { done: !!profile.profile_pic, label: 'Profile Photo' },
+        ];
+        const done = fields.filter(f => f.done).length;
+        setData({
+          isComplete: done === fields.length,
+          percent: Math.round((done / fields.length) * 100),
+          missing: fields.filter(f => !f.done).map(f => f.label),
+          profilePic: profile.profile_pic || null,
+        });
+      }
+    };
+
+    fetchProfile();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('profile-completion')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`,
+      }, () => {
+        fetchProfile();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   return data;
 };

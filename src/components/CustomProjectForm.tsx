@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ref, push } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,45 +24,31 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!user) {
-      onAuthRequired();
-      return;
-    }
-
+    if (!user) { onAuthRequired(); return; }
     if (!title || !description || !budget || !contact) {
       toast.error('Please fill all fields');
       return;
     }
 
     setLoading(true);
-
     try {
-      await push(ref(database, 'customProjects'), {
-        userId: user.uid,
-        userEmail: user.email,
-        title,
-        type,
-        description,
-        budget,
-        contact,
+      const { error } = await supabase.from('custom_projects').insert({
+        user_id: user.id,
+        user_email: user.email,
+        title, type, description, budget, contact,
         status: 'pending',
-        createdAt: Date.now(),
+        created_at: Date.now(),
       });
-
+      if (error) throw error;
       toast.success('Project request submitted! We will contact you soon.');
-      setTitle('');
-      setDescription('');
-      setBudget('');
-      setContact('');
-    } catch (error) {
+      setTitle(''); setDescription(''); setBudget(''); setContact('');
+    } catch {
       toast.error('Failed to submit request');
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-fill email from logged-in user
   const userEmail = user?.email || '';
 
   return (
@@ -71,49 +56,23 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
       <div className="container mx-auto px-4">
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Request Custom Project
-            </h2>
-            <p className="text-muted-foreground">
-              Have a unique idea? Let us build it for you!
-            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Request Custom Project</h2>
+            <p className="text-muted-foreground">Have a unique idea? Let us build it for you!</p>
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-4 bg-card p-6 rounded-2xl shadow-card">
-            {/* Email - Pre-filled and readonly */}
             <div className="space-y-2">
               <Label htmlFor="project-email">Account Email</Label>
-              <Input
-                id="project-email"
-                type="email"
-                value={userEmail}
-                disabled
-                className="bg-secondary/50 cursor-not-allowed"
-              />
-              {!user && (
-                <p className="text-xs text-muted-foreground">
-                  Please <button type="button" onClick={onAuthRequired} className="text-primary hover:underline">login</button> to submit a request
-                </p>
-              )}
+              <Input id="project-email" type="email" value={userEmail} disabled className="bg-secondary/50 cursor-not-allowed" />
+              {!user && <p className="text-xs text-muted-foreground">Please <button type="button" onClick={onAuthRequired} className="text-primary hover:underline">login</button> to submit a request</p>}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-title">Project Title</Label>
-              <Input
-                id="project-title"
-                placeholder="e.g., Birthday Surprise Website"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
+              <Input id="project-title" placeholder="e.g., Birthday Surprise Website" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-type">Project Type</Label>
               <Select value={type} onValueChange={(v) => setType(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="website">Website</SelectItem>
                   <SelectItem value="app">Mobile App</SelectItem>
@@ -121,25 +80,14 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-description">Description</Label>
-              <Textarea
-                id="project-description"
-                placeholder="Describe your project in detail..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                required
-              />
+              <Textarea id="project-description" placeholder="Describe your project in detail..." value={description} onChange={(e) => setDescription(e.target.value)} rows={4} required />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-budget">Budget Range (₹)</Label>
               <Select value={budget} onValueChange={setBudget}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select budget range" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select budget range" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="500-1000">₹500 - ₹1,000</SelectItem>
                   <SelectItem value="1000-2500">₹1,000 - ₹2,500</SelectItem>
@@ -148,27 +96,12 @@ const CustomProjectForm = ({ onAuthRequired }: CustomProjectFormProps) => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-contact">Contact (Email/Phone)</Label>
-              <Input
-                id="project-contact"
-                placeholder="Your email or phone number"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                required
-              />
+              <Input id="project-contact" placeholder="Your email or phone number" value={contact} onChange={(e) => setContact(e.target.value)} required />
             </div>
-
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit Request
-                </>
-              )}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" />Submit Request</>}
             </Button>
           </form>
         </div>

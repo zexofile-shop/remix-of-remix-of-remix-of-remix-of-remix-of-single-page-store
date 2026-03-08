@@ -14,16 +14,524 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      best_selling: {
+        Row: {
+          id: string
+          product_id: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          id?: string
+          product_id?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          id?: string
+          product_id?: string | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "best_selling_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_messages: {
+        Row: {
+          created_at: number | null
+          email: string | null
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          read: boolean | null
+        }
+        Insert: {
+          created_at?: number | null
+          email?: string | null
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          read?: boolean | null
+        }
+        Update: {
+          created_at?: number | null
+          email?: string | null
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          read?: boolean | null
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: number | null
+          discount_type: string | null
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_order: number | null
+          used_by: Json | null
+          used_count: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: number | null
+          discount_type?: string | null
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order?: number | null
+          used_by?: Json | null
+          used_count?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: number | null
+          discount_type?: string | null
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_order?: number | null
+          used_by?: Json | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
+      custom_projects: {
+        Row: {
+          admin_notes: string | null
+          budget: string | null
+          contact: string | null
+          created_at: number | null
+          description: string | null
+          id: string
+          status: string | null
+          title: string
+          type: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          budget?: string | null
+          contact?: string | null
+          created_at?: number | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title: string
+          type?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          budget?: string | null
+          contact?: string | null
+          created_at?: number | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title?: string
+          type?: string | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hero_slides: {
+        Row: {
+          created_at: number | null
+          id: string
+          image: string
+          sort_order: number | null
+          subtitle: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: number | null
+          id?: string
+          image: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: number | null
+          id?: string
+          image?: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      order_submissions: {
+        Row: {
+          created_at: number | null
+          form_data: Json | null
+          id: string
+          payment_amount: number | null
+          payment_type: string | null
+          product_id: string | null
+          product_image: string | null
+          product_title: string | null
+          razorpay_payment_id: string | null
+          status: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: number | null
+          form_data?: Json | null
+          id?: string
+          payment_amount?: number | null
+          payment_type?: string | null
+          product_id?: string | null
+          product_image?: string | null
+          product_title?: string | null
+          razorpay_payment_id?: string | null
+          status?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: number | null
+          form_data?: Json | null
+          id?: string
+          payment_amount?: number | null
+          payment_type?: string | null
+          product_id?: string | null
+          product_image?: string | null
+          product_title?: string | null
+          razorpay_payment_id?: string | null
+          status?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_submissions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          allow_customization: boolean | null
+          buy_button_label: string | null
+          category: string | null
+          content: string | null
+          created_at: number | null
+          delivery_link: string | null
+          description: string | null
+          display_price_from: string | null
+          id: string
+          image: string | null
+          image_aspect_ratio: string | null
+          is_free_resource: boolean | null
+          is_out_of_stock: boolean | null
+          left_button: Json | null
+          original_price: number | null
+          preview_link: string | null
+          price: number
+          razorpay_link: string | null
+          right_button: Json | null
+          screenshots: string[] | null
+          title: string
+          type: string
+          youtube_url: string | null
+        }
+        Insert: {
+          allow_customization?: boolean | null
+          buy_button_label?: string | null
+          category?: string | null
+          content?: string | null
+          created_at?: number | null
+          delivery_link?: string | null
+          description?: string | null
+          display_price_from?: string | null
+          id?: string
+          image?: string | null
+          image_aspect_ratio?: string | null
+          is_free_resource?: boolean | null
+          is_out_of_stock?: boolean | null
+          left_button?: Json | null
+          original_price?: number | null
+          preview_link?: string | null
+          price?: number
+          razorpay_link?: string | null
+          right_button?: Json | null
+          screenshots?: string[] | null
+          title: string
+          type?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          allow_customization?: boolean | null
+          buy_button_label?: string | null
+          category?: string | null
+          content?: string | null
+          created_at?: number | null
+          delivery_link?: string | null
+          description?: string | null
+          display_price_from?: string | null
+          id?: string
+          image?: string | null
+          image_aspect_ratio?: string | null
+          is_free_resource?: boolean | null
+          is_out_of_stock?: boolean | null
+          left_button?: Json | null
+          original_price?: number | null
+          preview_link?: string | null
+          price?: number
+          razorpay_link?: string | null
+          right_button?: Json | null
+          screenshots?: string[] | null
+          title?: string
+          type?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: number | null
+          display_name: string | null
+          email: string | null
+          id: string
+          instagram: string | null
+          phone: string | null
+          profile_pic: string | null
+          telegram: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: number | null
+          display_name?: string | null
+          email?: string | null
+          id: string
+          instagram?: string | null
+          phone?: string | null
+          profile_pic?: string | null
+          telegram?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: number | null
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          phone?: string | null
+          profile_pic?: string | null
+          telegram?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      purchases: {
+        Row: {
+          amount: number | null
+          coupon_code: string | null
+          coupon_discount: number | null
+          delivery_link: string | null
+          id: string
+          original_amount: number | null
+          product_id: string | null
+          product_image: string | null
+          product_title: string | null
+          product_type: string | null
+          purchase_date: number | null
+          purchase_type: string | null
+          razorpay_payment_id: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          coupon_code?: string | null
+          coupon_discount?: number | null
+          delivery_link?: string | null
+          id?: string
+          original_amount?: number | null
+          product_id?: string | null
+          product_image?: string | null
+          product_title?: string | null
+          product_type?: string | null
+          purchase_date?: number | null
+          purchase_type?: string | null
+          razorpay_payment_id?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          coupon_code?: string | null
+          coupon_discount?: number | null
+          delivery_link?: string | null
+          id?: string
+          original_amount?: number | null
+          product_id?: string | null
+          product_image?: string | null
+          product_title?: string | null
+          product_type?: string | null
+          purchase_date?: number | null
+          purchase_type?: string | null
+          razorpay_payment_id?: string | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_settings: {
+        Row: {
+          id: string
+          key: string
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      support_channels: {
+        Row: {
+          id: string
+          phone1: string | null
+          phone2: string | null
+          telegram1: string | null
+          telegram2: string | null
+          whatsapp1: string | null
+          whatsapp2: string | null
+        }
+        Insert: {
+          id?: string
+          phone1?: string | null
+          phone2?: string | null
+          telegram1?: string | null
+          telegram2?: string | null
+          whatsapp1?: string | null
+          whatsapp2?: string | null
+        }
+        Update: {
+          id?: string
+          phone1?: string | null
+          phone2?: string | null
+          telegram1?: string | null
+          telegram2?: string | null
+          whatsapp1?: string | null
+          whatsapp2?: string | null
+        }
+        Relationships: []
+      }
+      testimonials: {
+        Row: {
+          approved: boolean | null
+          created_at: number | null
+          id: string
+          message: string
+          name: string
+          rating: number | null
+        }
+        Insert: {
+          approved?: boolean | null
+          created_at?: number | null
+          id?: string
+          message: string
+          name: string
+          rating?: number | null
+        }
+        Update: {
+          approved?: boolean | null
+          created_at?: number | null
+          id?: string
+          message?: string
+          name?: string
+          rating?: number | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          access_level: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          permissions: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          access_level?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          access_level?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_admin_permissions: { Args: { _user_id: string }; Returns: Json }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +658,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
