@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue, update } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { THEMES, ThemeConfig } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,18 +11,31 @@ const ThemeManager = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const themeRef = ref(database, 'siteSettings/activeTheme');
-    const unsub = onValue(themeRef, (snapshot) => {
-      const val = snapshot.val();
-      if (val) setActiveTheme(val);
-    });
-    return () => unsub();
+    const fetchTheme = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'activeTheme')
+        .maybeSingle();
+      if (data?.value) setActiveTheme(data.value as string);
+    };
+    fetchTheme();
   }, []);
 
   const handleSetTheme = async (themeId: string) => {
     setSaving(true);
     try {
-      await update(ref(database, 'siteSettings'), { activeTheme: themeId });
+      const { data: existing } = await supabase
+        .from('site_settings')
+        .select('id')
+        .eq('key', 'activeTheme')
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('site_settings').update({ value: themeId }).eq('key', 'activeTheme');
+      } else {
+        await supabase.from('site_settings').insert({ key: 'activeTheme', value: themeId });
+      }
       setActiveTheme(themeId);
       toast.success(`Theme changed to ${THEMES.find(t => t.id === themeId)?.name || themeId}!`);
     } catch (error) {
@@ -48,7 +60,6 @@ const ThemeManager = () => {
         </p>
       </div>
 
-      {/* Currently Active */}
       <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20">
         <p className="text-xs text-muted-foreground mb-1">Currently Active</p>
         <div className="flex items-center gap-2">
@@ -62,38 +73,20 @@ const ThemeManager = () => {
         </div>
       </div>
 
-      {/* Seasonal Themes */}
       <div>
-        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          🌍 Seasonal Themes
-        </h4>
+        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">🌍 Seasonal Themes</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {seasonalThemes.map(theme => (
-            <ThemeCard 
-              key={theme.id} 
-              theme={theme} 
-              isActive={activeTheme === theme.id} 
-              onSelect={handleSetTheme} 
-              disabled={saving}
-            />
+            <ThemeCard key={theme.id} theme={theme} isActive={activeTheme === theme.id} onSelect={handleSetTheme} disabled={saving} />
           ))}
         </div>
       </div>
 
-      {/* Festival Themes */}
       <div>
-        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          🎉 Festival Themes
-        </h4>
+        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">🎉 Festival Themes</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {festivalThemes.map(theme => (
-            <ThemeCard 
-              key={theme.id} 
-              theme={theme} 
-              isActive={activeTheme === theme.id} 
-              onSelect={handleSetTheme} 
-              disabled={saving}
-            />
+            <ThemeCard key={theme.id} theme={theme} isActive={activeTheme === theme.id} onSelect={handleSetTheme} disabled={saving} />
           ))}
         </div>
       </div>

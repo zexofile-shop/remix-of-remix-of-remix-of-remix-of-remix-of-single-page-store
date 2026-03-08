@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Phone, Send, MessageCircle } from 'lucide-react';
 import { SupportChannels } from '@/types';
 import zexofileLogo from '@/assets/zexofile-logo.png';
@@ -9,12 +8,11 @@ const Footer = () => {
   const [supportChannels, setSupportChannels] = useState<SupportChannels>({});
 
   useEffect(() => {
-    const supportRef = ref(database, 'supportChannels');
-    const unsubscribe = onValue(supportRef, (snapshot) => {
-      const data = snapshot.val();
+    const fetchSupport = async () => {
+      const { data } = await supabase.from('support_channels').select('*').limit(1).maybeSingle();
       if (data) setSupportChannels(data);
-    });
-    return () => unsubscribe();
+    };
+    fetchSupport();
   }, []);
 
   const openWhatsApp = (number?: string) => {
@@ -32,7 +30,6 @@ const Footer = () => {
 
   return (
     <footer className="bg-foreground text-background">
-      {/* Support Section */}
       {hasSupport && (
         <section className="py-12 border-b border-background/10">
           <div className="container mx-auto px-4">
@@ -73,7 +70,6 @@ const Footer = () => {
         </section>
       )}
 
-      {/* Bottom Footer */}
       <div className="py-6">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center gap-3">

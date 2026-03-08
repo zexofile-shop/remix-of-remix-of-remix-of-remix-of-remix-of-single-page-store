@@ -1,29 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { 
-  Palette, 
-  Zap, 
-  Heart, 
-  Shield, 
-  MessageCircle,
-  ShoppingCart,
-  CreditCard,
-  CheckCircle,
-  Mail,
-  Phone,
-  MapPin,
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube
+  Palette, Zap, Heart, Shield, MessageCircle, ShoppingCart, CreditCard, CheckCircle,
+  Mail, Phone, MapPin, Instagram, Facebook, Twitter, Youtube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { push } from 'firebase/database';
 
 interface SiteContent {
   whatWeOffer?: string;
@@ -52,21 +37,12 @@ const WhatWeOfferSection = ({ content }: { content?: string }) => {
     <section id="what-we-offer" className="py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            What We Offer
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {content || 'We create beautiful, personalized websites that capture your special moments and relationships'}
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">What We Offer</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">{content || 'We create beautiful, personalized websites that capture your special moments and relationships'}</p>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {offerings.map((item, index) => (
-            <div
-              key={index}
-              className="bg-card rounded-2xl p-6 text-center shadow-card hover:shadow-soft transition-shadow animate-slide-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
+            <div key={index} className="bg-card rounded-2xl p-6 text-center shadow-card hover:shadow-soft transition-shadow animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <div className="w-14 h-14 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
                 <item.icon className="h-7 w-7 text-primary" />
               </div>
@@ -92,21 +68,12 @@ const WhyChooseUsSection = ({ content }: { content?: string }) => {
     <section id="why-choose-us" className="py-16 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Why Choose Us
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {content || 'We\'re dedicated to making your special moments unforgettable'}
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Why Choose Us</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">{content || 'We\'re dedicated to making your special moments unforgettable'}</p>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {reasons.map((reason, index) => (
-            <div
-              key={index}
-              className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50 animate-slide-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
+            <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50 animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <CheckCircle className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-semibold text-foreground">{reason.title}</h3>
@@ -132,24 +99,13 @@ const HowToBuySection = ({ content }: { content?: string }) => {
     <section id="how-to-buy" className="py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            How to Buy
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {content || 'Getting your personalized website is easy! Follow these simple steps'}
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">How to Buy</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">{content || 'Getting your personalized website is easy! Follow these simple steps'}</p>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((step, index) => (
-            <div
-              key={index}
-              className="relative bg-card rounded-2xl p-6 text-center shadow-card animate-slide-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
-                {step.step}
-              </div>
+            <div key={index} className="relative bg-card rounded-2xl p-6 text-center shadow-card animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">{step.step}</div>
               <div className="w-12 h-12 mx-auto mb-4 mt-2 bg-primary/10 rounded-full flex items-center justify-center">
                 <step.icon className="h-6 w-6 text-primary" />
               </div>
@@ -171,26 +127,14 @@ const ContactSection = ({ content }: { content: SiteContent }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim() || !email.trim() || !message.trim()) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
+    if (!name.trim() || !email.trim() || !message.trim()) { toast.error('Please fill in all fields'); return; }
     setIsSubmitting(true);
     try {
-      await push(ref(database, 'contactMessages'), {
-        name: name.trim(),
-        email: email.trim(),
-        message: message.trim(),
-        createdAt: Date.now(),
-        status: 'unread',
+      await supabase.from('contact_messages').insert({
+        name: name.trim(), email: email.trim(), message: message.trim(), created_at: Date.now(), read: false,
       });
-      
       toast.success('Message sent successfully!');
-      setName('');
-      setEmail('');
-      setMessage('');
+      setName(''); setEmail(''); setMessage('');
     } catch (error) {
       toast.error('Failed to send message. Please try again.');
     } finally {
@@ -202,160 +146,54 @@ const ContactSection = ({ content }: { content: SiteContent }) => {
     <section id="contact" className="py-16 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Contact Us
-          </h2>
-          <p className="text-muted-foreground">
-            Have questions? We're here to help!
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Contact Us</h2>
+          <p className="text-muted-foreground">Have questions? We're here to help!</p>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          {/* Contact Info */}
           <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><Mail className="h-5 w-5 text-primary" /></div>
               <div>
                 <p className="font-medium text-foreground">Email</p>
-                <a 
-                  href={`mailto:${content?.contactEmail || 'bringcashere@gmail.com'}`}
-                  className="text-muted-foreground hover:text-primary"
-                >
-                  {content?.contactEmail || 'bringcashere@gmail.com'}
-                </a>
+                <a href={`mailto:${content?.contactEmail || 'bringcashere@gmail.com'}`} className="text-muted-foreground hover:text-primary">{content?.contactEmail || 'bringcashere@gmail.com'}</a>
               </div>
             </div>
-
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Phone className="h-5 w-5 text-primary" />
-              </div>
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><Phone className="h-5 w-5 text-primary" /></div>
               <div>
                 <p className="font-medium text-foreground">Phone</p>
-                <a 
-                  href={`tel:${content?.contactPhone || '+919876543210'}`}
-                  className="text-muted-foreground hover:text-primary"
-                >
-                  {content?.contactPhone || '+91 98765 43210'}
-                </a>
+                <a href={`tel:${content?.contactPhone || '+919876543210'}`} className="text-muted-foreground hover:text-primary">{content?.contactPhone || '+91 98765 43210'}</a>
               </div>
             </div>
-
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-primary" />
-              </div>
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><MapPin className="h-5 w-5 text-primary" /></div>
               <div>
                 <p className="font-medium text-foreground">Address</p>
-                <p className="text-muted-foreground">
-                  {content?.contactAddress || 'India'}
-                </p>
+                <p className="text-muted-foreground">{content?.contactAddress || 'India'}</p>
               </div>
             </div>
-
-            {/* Social Links */}
             <div className="pt-4">
               <p className="font-medium text-foreground mb-4">Connect With Us</p>
               <div className="flex gap-3">
-                {content?.socialInstagram && (
-                  <a
-                    href={content.socialInstagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    <Instagram className="h-5 w-5" />
-                  </a>
-                )}
-                {content?.socialFacebook && (
-                  <a
-                    href={content.socialFacebook}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    <Facebook className="h-5 w-5" />
-                  </a>
-                )}
-                {content?.socialTwitter && (
-                  <a
-                    href={content.socialTwitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    <Twitter className="h-5 w-5" />
-                  </a>
-                )}
-                {content?.socialYoutube && (
-                  <a
-                    href={content.socialYoutube}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-                  >
-                    <Youtube className="h-5 w-5" />
-                  </a>
-                )}
+                {content?.socialInstagram && <a href={content.socialInstagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Instagram className="h-5 w-5" /></a>}
+                {content?.socialFacebook && <a href={content.socialFacebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Facebook className="h-5 w-5" /></a>}
+                {content?.socialTwitter && <a href={content.socialTwitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Twitter className="h-5 w-5" /></a>}
+                {content?.socialYoutube && <a href={content.socialYoutube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Youtube className="h-5 w-5" /></a>}
                 {!content?.socialInstagram && !content?.socialFacebook && !content?.socialTwitter && !content?.socialYoutube && (
                   <>
-                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                      <Instagram className="h-5 w-5" />
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                      <Facebook className="h-5 w-5" />
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                      <Twitter className="h-5 w-5" />
-                    </a>
+                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Instagram className="h-5 w-5" /></a>
+                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Facebook className="h-5 w-5" /></a>
+                    <a href="#" className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"><Twitter className="h-5 w-5" /></a>
                   </>
                 )}
               </div>
             </div>
           </div>
-
-          {/* Contact Form */}
           <form onSubmit={handleSubmit} className="space-y-4 bg-card rounded-2xl p-6 shadow-card">
-            <div className="space-y-2">
-              <Label htmlFor="contact-name">Your Name</Label>
-              <Input
-                id="contact-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-                maxLength={50}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contact-email">Email</Label>
-              <Input
-                id="contact-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                maxLength={100}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contact-message">Message</Label>
-              <Textarea
-                id="contact-message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="How can we help you?"
-                rows={4}
-                maxLength={1000}
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending...' : 'Send Message'}
-            </Button>
+            <div className="space-y-2"><Label htmlFor="contact-name">Your Name</Label><Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" maxLength={50} /></div>
+            <div className="space-y-2"><Label htmlFor="contact-email">Email</Label><Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" maxLength={100} /></div>
+            <div className="space-y-2"><Label htmlFor="contact-message">Message</Label><Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help you?" rows={4} maxLength={1000} /></div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? 'Sending...' : 'Send Message'}</Button>
           </form>
         </div>
       </div>
@@ -378,14 +216,8 @@ For any privacy concerns, please contact us at bringcashere@gmail.com`;
     <section id="privacy-policy" className="py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">
-            Privacy Policy
-          </h2>
-          <div className="bg-card rounded-2xl p-6 shadow-card">
-            <p className="text-muted-foreground whitespace-pre-line">
-              {content || defaultPolicy}
-            </p>
-          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">Privacy Policy</h2>
+          <div className="bg-card rounded-2xl p-6 shadow-card"><p className="text-muted-foreground whitespace-pre-line">{content || defaultPolicy}</p></div>
         </div>
       </div>
     </section>
@@ -407,34 +239,27 @@ For refund requests, please contact us at bringcashere@gmail.com with your order
     <section id="refund-policy" className="py-16 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">
-            Refund Policy
-          </h2>
-          <div className="bg-card rounded-2xl p-6 shadow-card">
-            <p className="text-muted-foreground whitespace-pre-line">
-              {content || defaultPolicy}
-            </p>
-          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">Refund Policy</h2>
+          <div className="bg-card rounded-2xl p-6 shadow-card"><p className="text-muted-foreground whitespace-pre-line">{content || defaultPolicy}</p></div>
         </div>
       </div>
     </section>
   );
 };
 
-// Main component that exports all sections
 const InfoSections = () => {
   const [siteContent, setSiteContent] = useState<SiteContent>({});
 
   useEffect(() => {
-    const contentRef = ref(database, 'siteContent');
-    const unsubscribe = onValue(contentRef, (snapshot) => {
-      const data = snapshot.val();
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('site_settings').select('key, value');
       if (data) {
-        setSiteContent(data);
+        const content: any = {};
+        data.forEach((row: any) => { content[row.key] = row.value; });
+        setSiteContent(content);
       }
-    });
-
-    return () => unsubscribe();
+    };
+    fetchSettings();
   }, []);
 
   return (
