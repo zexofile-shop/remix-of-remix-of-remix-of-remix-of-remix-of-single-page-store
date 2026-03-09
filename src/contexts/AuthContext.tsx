@@ -26,6 +26,7 @@ interface AuthContextType {
   adminAccessLevel: number;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -150,6 +151,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
+  const signInWithGoogle = async () => {
+    const { lovable } = await import('@/integrations/lovable/index');
+    const result = await lovable.auth.signInWithOAuth('google', {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -158,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{
       user, session, loading, isAdmin, isSuperAdmin,
       adminPermissions, adminAccessLevel,
-      signIn, signUp, logout
+      signIn, signUp, signInWithGoogle, logout
     }}>
       {!loading ? children : (
         <div className="min-h-screen flex items-center justify-center bg-background">
