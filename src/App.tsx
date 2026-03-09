@@ -30,11 +30,15 @@ const SPARedirectHandler = () => {
 
   useEffect(() => {
     // Check for redirect from 404.html
-    const redirectPath = sessionStorage.getItem('spa-redirect');
-    if (redirectPath) {
+    const redirectEncoded = sessionStorage.getItem('spa-redirect');
+    if (redirectEncoded) {
       sessionStorage.removeItem('spa-redirect');
-      const path = '/' + redirectPath.replace(/~and~/g, '&');
-      navigate(path, { replace: true });
+      try {
+        const target = decodeURIComponent(redirectEncoded);
+        navigate(target, { replace: true });
+      } catch {
+        // ignore malformed encoding
+      }
       return;
     }
 
@@ -42,8 +46,12 @@ const SPARedirectHandler = () => {
     const urlParams = new URLSearchParams(location.search);
     const pathParam = urlParams.get('p');
     if (pathParam && location.pathname === '/') {
-      const path = '/' + pathParam.replace(/~and~/g, '&');
-      navigate(path, { replace: true });
+      try {
+        const target = decodeURIComponent(pathParam);
+        navigate(target, { replace: true });
+      } catch {
+        // ignore malformed encoding
+      }
     }
   }, [navigate, location]);
 
