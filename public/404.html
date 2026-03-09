@@ -5,23 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Redirecting... | ZexoFile Shop</title>
     <script type="text/javascript">
-        // GitHub Pages / Hostinger SPA redirect script
-        var l = window.location;
-        
-        // For OAuth paths, reload with the full URL so the SPA can handle it
-        if (l.pathname.startsWith('/~oauth')) {
-            // OAuth callback - redirect to root with full path preserved
-            sessionStorage.setItem('spa-redirect', l.pathname + l.search + l.hash);
-            l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + l.pathname + l.search + l.hash);
-        } else {
-            var pathSegmentsToKeep = 0;
-            var pathAndHash = l.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/').replace(/&/g, '~and~') +
-                (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-                l.hash;
-            
-            sessionStorage.setItem('spa-redirect', pathAndHash);
-            l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/?p=' + pathAndHash);
-        }
+        // GitHub Pages SPA redirect script (works for normal routes + /~oauth callback)
+        (function () {
+            var l = window.location;
+            var fullPath = l.pathname + l.search + l.hash;
+            var encoded = encodeURIComponent(fullPath);
+
+            sessionStorage.setItem('spa-redirect', encoded);
+            l.replace(l.protocol + '//' + l.host + '/?p=' + encoded);
+        })();
     </script>
 </head>
 <body>
