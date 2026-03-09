@@ -6,19 +6,22 @@
     <title>Redirecting... | ZexoFile Shop</title>
     <script type="text/javascript">
         // GitHub Pages / Hostinger SPA redirect script
-        // Redirects all 404s to the root with the path stored in sessionStorage
-        var pathSegmentsToKeep = 0;
-
         var l = window.location;
-        var pathAndHash = l.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/').replace(/&/g, '~and~') +
-            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-            l.hash;
         
-        // Store the original path for the main app to handle
-        sessionStorage.setItem('spa-redirect', pathAndHash);
-        
-        // Redirect to root
-        l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/?p=' + pathAndHash);
+        // For OAuth paths, reload with the full URL so the SPA can handle it
+        if (l.pathname.startsWith('/~oauth')) {
+            // OAuth callback - redirect to root with full path preserved
+            sessionStorage.setItem('spa-redirect', l.pathname + l.search + l.hash);
+            l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + l.pathname + l.search + l.hash);
+        } else {
+            var pathSegmentsToKeep = 0;
+            var pathAndHash = l.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/').replace(/&/g, '~and~') +
+                (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                l.hash;
+            
+            sessionStorage.setItem('spa-redirect', pathAndHash);
+            l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/?p=' + pathAndHash);
+        }
     </script>
 </head>
 <body>
